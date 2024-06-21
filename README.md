@@ -1,6 +1,10 @@
 # frontend
 
-This template should help get you started developing with Vue 3 in Vite.
+## Integracion de Node js
+ - se integra node js para cargar y descargar archivos a google Drive
+ - Enlace del servicio de Nodejs: https://github.com/ABRAHAM2J/nodejs.git
+
+
 
 ## Recommended IDE Setup
 
