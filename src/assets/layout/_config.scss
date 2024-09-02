@@ -1,0 +1,135 @@
+.layout-wrapper {
+    .layout-config-button {
+        display: block;
+        position: fixed;
+        width: 3rem;
+        height: 3rem;
+        line-height: 3rem;
+        background: var(--primary-color);
+        color: var(--primary-color-text);
+        text-align: center;
+        top: 50%;
+        right: 0;
+        margin-top: -1.5rem;
+        border-top-left-radius: var(--border-radius);
+        border-bottom-left-radius: var(--border-radius);
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        transition: background-color var(--transition-duration);
+        overflow: hidden;
+        cursor: pointer;
+        z-index: 999;
+        box-shadow: -0.25rem 0 1rem rgba(0, 0, 0, 0.15);
+
+        i {
+            font-size: 2rem;
+            line-height: inherit;
+            transform: rotate(0deg);
+            transition: transform 1s;
+        }
+
+        &:hover {
+            background: var(--primary-400);
+        }
+    }
+
+    .layout-config-sidebar {
+        &.p-sidebar {
+            .p-sidebar-content {
+                padding-left: 2rem;
+                padding-right: 2rem;
+            }
+        }
+    }
+}
+
+.custom-file-upload {
+    display: inline-block;
+    padding: 10px 20px;
+    cursor: pointer;
+    background-color: #3498db;
+    color: #fff;
+    border-radius: 5px;
+    border: 1px solid #3498db;
+  }
+  
+  .custom-file-upload:hover {
+    background-color: #2980b9;
+  }
+  .upload-container {
+    display: flex;
+    justify-content: center;
+  }
+  
+  .center-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .preview-container {
+    background-color: rgba(245, 245, 245, 0.937);
+    width: 100%;
+    height: 170px;
+    overflow: hidden;
+}
+
+.preview {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.doc {
+    padding-top: 10px;
+}
+
+.container {
+  display: flex;
+}
+
+.image-list {
+  width: 30%/* Ancho del listado de imágenes */
+}
+
+.image-preview {
+    border: 1px solid;
+    flex: 1; /* El resto del espacio disponible para la vista previa de la imagen */
+    width: 70%;
+}
+
+.preview-container2 {
+  background-color: rgba(245, 245, 245, 0.937);
+  width: 100%;
+  height: 600px;
+  overflow: hidden;
+}
+
+.preview-container3 {
+  background-color: rgba(245, 245, 245, 0.937);
+  width: 60%;
+  height: 400px;
+  overflow: hidden;
+}
+
+.menu-bar {
+  width: 100%;
+}
+
+.menu-bar .p-menuitem-text {
+  font-size: 16px; /* Cambia el tamaño de la fuente según lo necesites */
+}
+
+.inicio {
+  width: 60%;
+  text-align: center;
+  background-color: rgb(233, 255, 233);
+}
+
+i.text {
+  display: flex;
+  align-items: center;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+}
