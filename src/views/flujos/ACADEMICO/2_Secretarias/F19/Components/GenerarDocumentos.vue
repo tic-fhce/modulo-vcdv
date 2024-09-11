@@ -51,9 +51,9 @@
 <script setup>
 import { useStore } from 'vuex';
 import { ref, watch, onMounted } from 'vue';
-import { handleUpload, handleUrl, handleDownload } from './driveServiceTribunal';
+import { handleUpload, handleUrl, handleDownload } from './driveServiceCambio';
 import documentService from '@/services/document.service';
-import designacionTribunalService from '@/services/designacionTribunal.service';
+import cambioModalidadService from '@/services/cambioModalidad.service';
 
 const props = defineProps({
     documentos: Array,
@@ -78,7 +78,7 @@ onMounted(async () => {
     try {
         for (const doc of localDocumentos.value) {
             const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'c_' + doc.value };
-            const res = await designacionTribunalService.obtenerColumna(dat);
+            const res = await cambioModalidadService.obtenerColumna(dat);
             if (res.data != '') {
                 upC++;
             }
@@ -89,7 +89,7 @@ onMounted(async () => {
             await getDocumentUrls();
         }
     } catch (error) {
-        //console.error(error);
+        console.error(error);
     }
 });
 
@@ -137,7 +137,7 @@ async function getDocumentUrls() {
 async function downloadDocument(data) {
     loading.value = true;
     try {
-        const mensaje = await handleDownload(datosrecividos.nrotramite, 'c_' + data.value, data.value, datosrecividos.flujo, 'designacion_tribunal');
+        const mensaje = await handleDownload(datosrecividos.nrotramite, 'c_' + data.value, data.value, datosrecividos.flujo, 'cambio_modalidad');
         alert(mensaje);
     } catch (error) {
         alert('Ocurrió un error al intentar descargar el documento.');
@@ -157,7 +157,7 @@ function redirectDocument(data) {
 async function verDocumento(value) {
     try {
         const nt = datosrecividos.nrotramite;
-        const dat = { nombre: value, nrotramite: nt, tabla: 'designacion_tribunal', flujo: datosrecividos.flujo };
+        const dat = { nombre: value, nrotramite: nt, tabla: 'cambio_modalidad', flujo: datosrecividos.flujo };
         const response = await documentService.recuperarDocumentos(dat);
         const archivoBlob = new Blob([response.data], { type: response.headers['content-type'] });
         const archivoURL = URL.createObjectURL(archivoBlob);

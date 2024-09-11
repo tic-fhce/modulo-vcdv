@@ -1,56 +1,38 @@
 <template>
     <AppTopbar></AppTopbar>
     <br>
+    <!-- <AppMenu></AppMenu> -->
     <div class="layout-main-container">
-        <div style="width: 80%;">
+        <div style="width: 90%;">
             <div class="card">
 
-                <AppDatos :active="true" :titulo="'CONCURSO DE MERITOS DE DOCENTES INTERINOS'"></AppDatos>
+                <AppDatos :active="true" :titulo="'DESIGNACION DE DOCENTES INTERINOS'"></AppDatos>
 
-                <ListaArchivos :valueArchivos="valueArchivos" :nomArchivos="nomArchivos" :tabla="'concurso_doc_interinos'" />
-                <br><br>
-            </div>
+                <h6 :style="{ color: 'blue', textTransform: 'uppercase' }">
+                    cargar los documentos faltantes para su designacion
+                </h6>
 
-            <div class="card">
-                <h5>GENERAR LA NOTA DE ATENCION</h5>
-                <div v-if="loading" class="loading-icon">
-                    <i class="pi pi-spin pi-spinner"></i> Cargando...
-                </div> <br>
-                <div class="flex justify-content-left flex-wrap gap-3">
-                    <Button @click="uploadDocument" :disabled="uploadDone" severity="success">
-                        <i class="pi pi-book"> Crear Documento</i>
-                    </Button>
-                    <Button v-if="uploadDone" :disabled="!swdoc" @click="redirectDocument" severity="info">
-                        <i class="pi pi-link"> Editar Documento</i>
-                    </Button>
-                    <Button v-if="uploadDone" :disabled="!swdoc" @click="downloadDocument" severity="info">
-                        <i class="pi pi-download"> Descargar Documento</i>
-                    </Button>
+                <div v-if="swdoc" class="flex justify-content-center p-fluid mt-5 md:flex md:flex-wrap">
+                    <div v-for="(documento, index) in nomdocumentos" :key="index" class="field col-3 md:col-3">
+                        <div class="center-content">
+                            <div class="preview-container">
+                                <img v-if="!fileUrl[index]" src="@/assets/images/img_document.png"
+                                    class="preview">
+                                <iframe v-else-if="isPDF[index]" :src="fileUrl[index]" class="preview"></iframe>
+                                <img v-else :src="fileUrl[index]" class="preview">
+                            </div>
+                            <div class="doc">
+                                <h4>{{ documento }}</h4>
+                                <label :for="'file-upload-' + index" class="custom-file-upload"> Cargar Documento
+                                </label>
+                                <input :id="'file-upload-' + index" accept=".pdf, image/*" type="file"
+                                    @change="handleFileUpload(index, $event)" style="display: none;">
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <br><br>
-                <div v-if="uploadDone">
-                    <DataTable :value="documentos" :paginator="false">
-                        <Column header="DOCUMENTO">
-                            <template #body="{ data }">
-                                {{ data.archivo }}
-                            </template>
-                        </Column>
-                        <Column header="ENLACES">
-                            <template #body="{ data }">
-                                <a :href="data.url" @click.prevent="cargarDocumento(data.tipo)">
-                                    <i class="pi pi-link"> Ver Documento</i>
-                                </a>
-                            </template>
-                        </Column>
-                        <Column v-if="swdoc" header="FIRMAR">
-                            <template #body="{ data }">
-                                <Button @click="firmarDocumento(data)" severity="info"><i class="pi pi-pencil">
-                                        Firmar</i></Button>
-                            </template>
-                        </Column>
-                    </DataTable>
-                </div>
-                <br><br>
+
                 <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
                     <Button @click="redireccionar('/tramite-concluido')" severity="warning"><i
                             class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
@@ -58,10 +40,10 @@
                 <div v-else class="flex justify-content-left flex-wrap gap-3">
                     <Button @click="redireccionar('/tramite-pendiente')" severity="warning"><i
                             class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
-                    <Button @click="enviarTramite()" :disabled="!uploadDone"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
+                    <Button @click="enviarTramite()"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
                 </div>
+                <!-- <p @click="enviarMensaje">Haz clic aquí para enviar un mensaje de WhatsApp</p> -->
             </div>
-            <!-- {{ datosrecividos }} -->
         </div>
     </div>
     <AppFooter></AppFooter>
@@ -70,138 +52,84 @@
 <script setup>
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
-import { createApp, ref, computed, onMounted } from 'vue';
+import { ref } from 'vue';
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
+import AppMenu from '@/layout/bandeja/AppMenu.vue';
 import AppDatos from './Components/Datos.vue';
-import ListaArchivos from './Components/ListaArchivos.vue'
 import workflowService from '@/services/workflow.service';
-import concursoDocInterinos from '@/services/concursoDocInterinos.service'
 import documentService from '@/services/document.service';
-import { handleUpload, handleUrl, handleDownload } from './Components/driveServiceConcurso'
 
 const router = useRouter()
 const store = useStore()
+
+const fileUrl = ref([])
+const isPDF = ref([false])
 const datosrecividos = store.getters.getData
 const swdoc = !datosrecividos.fechafin
-const uploadDone = ref(false);
-const urlDoc = ref()
-const loading = ref(false)
-const docDrive = ref('NOTA CONCURSO MERITOS DOCENTES INTERINOS.docx')
 
+const nomArchivos = ["faltantes"]
+const nomdocumentos = ['1. Documentos Faltantes'];
+const imagenesSeleccionadas = Array.from({ length: 1 }, () => ref(null));
 
-const documentos = [{ archivo: '1. Nota de atencion', url: urlDoc, tipo: 'nota_vic' }]
-
-const nomArchivos = ref(['1. Nota de solicitud', '2. Respaldo']);
-const valueArchivos = ref(["solicitud", "respaldo"]);
-
-
-onMounted(async () => {
-    const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'c_nota_vic' };
-    try {
-        const res = await concursoDocInterinos.obtenerColumna(dat);
-        if (res.data != '') {
-            uploadDone.value = true
-            getDocumentUrl();
-        }
-    } catch (error) {
-        console.error(error);
-    }
-});
 
 async function enviarTramite() {
-    const confirmed = confirm('¿Esta seguro de enviar estos datos?');
-    if (confirmed) {
-        const a = datosrecividos.nrotramite
-        const b = datosrecividos.flujo
-        const c = datosrecividos.proceso
+    if (imagenesSeleccionadas.every(img => img.value !== null)) {
+        const confirmed = confirm('¿Está seguro de enviar estos datos?');
+        if (confirmed) {
+            const a = datosrecividos.nrotramite;
+            const enviarSolicitud = async (index) => {
+                if (index < imagenesSeleccionadas.length) {
+                    const imagen = imagenesSeleccionadas[index];
+                    if (imagen && imagen.value !== null) {
+                        const formData = new FormData();
+                        formData.append('file', imagen.value);
+                        formData.append('nombre', nomArchivos[index]);
+                        formData.append('nrotramite', a);
+                        formData.append('flujo', datosrecividos.flujo);
+                        formData.append('tabla', 'designacion_doc_interinos')
 
-        try {
-            const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' }
-
-            await workflowService.siguienteproceso(env)
-
-        } catch (error) {
-            alert(error);
+                        try {
+                            await documentService.guardarDocumentos(formData)
+                            // await convalidacionPlanPlanService.guardarDocumentos(formData)
+                        } catch (error) {
+                            alert(error);
+                        }
+                    }
+                    await enviarSolicitud(index + 1); 
+                } else {
+                    const env = {'flujo': datosrecividos.flujo, 'proceso': datosrecividos.proceso, 'tramiteId': a, 'comentario': '', 'condicion': ''};
+                    await workflowService.siguienteproceso(env);
+                    redireccionar("/tramite-concluido")
+                }
+            };
+            await enviarSolicitud(0);
+        } else {
+            // El usuario canceló
         }
-
-        router.push("/tramite-concluido");
     } else {
-        // El usuario canceló
-    }
-
-}
-
-async function uploadDocument() {
-    loading.value = true
-    try {
-        const message = await handleUpload(docDrive.value, datosrecividos.nrotramite, 'c_nota_vic');
-        alert(message);
-        uploadDone.value = true;
-        if (uploadDone.value) {
-            getDocumentUrl();
-        }
-    } finally {
-        loading.value = false
-    }
-
-}
-
-async function getDocumentUrl() {
-    loading.value = true
-    try {
-        urlDoc.value = await handleUrl(datosrecividos.nrotramite, 'c_nota_vic');
-    } finally {
-        loading.value = false
+        alert('Cargue los documentos requeridos porfavor');
     }
 }
 
+const handleFileUpload = (index, event) => {
+    const nuevaImagen = event.target.files[0];
+    if (nuevaImagen) {
+        imagenesSeleccionadas[index].value = nuevaImagen;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            fileUrl.value[index] = e.target.result; // Guardar la URL de la imagen en el array correspondiente
+        };
+        reader.readAsDataURL(nuevaImagen);
 
-async function downloadDocument() {
-    loading.value = true
-    try {
-        const message = await handleDownload(datosrecividos.nrotramite, 'c_nota_vic', 'nota_vic', datosrecividos.flujo, 'concurso_doc_interinos');
-        alert(message);
-    } finally {
-        loading.value = false
+        isPDF.value[index] = nuevaImagen.type === 'application/pdf'; // Verificar si la imagen es PDF
     }
-
-}
-
-function redirectDocument() {
-    loading.value = true
-    try {
-        if (!urlDoc.value) {
-            console.error("URL no está definida");
-            return;
-        }
-        window.open(urlDoc.value, '_blank');
-    } finally {
-        loading.value = false
-    }
-
-}
-
-async function cargarDocumento(nombreDocumento) {
-    try {
-        const nt = datosrecividos.nrotramite;
-        const dat = { nombre: nombreDocumento, nrotramite: nt, tabla: 'concurso_doc_interinos', flujo: datosrecividos.flujo };
-        const response = await documentService.recuperarDocumentos(dat);
-        const archivoBlob = new Blob([response.data], { type: response.headers['content-type'] });
-        const archivoURL = URL.createObjectURL(archivoBlob);
-        window.open(archivoURL, '_blank');
-    } catch {
-        alert('Descargue el documento antes porfavor')
-    }
-
-}
-
-async function firmarDocumento(documento) {
-
-}
-
+};
 
 function redireccionar(url) {
     router.replace(url)
 }
+
 </script>
+
+<style></style>

@@ -6,11 +6,22 @@
             <div class="grid p-fluid">
                 <div class="card">
 
-                    <AppDatos :active="true" :titulo="'APROBACION DE PERFIL DE GRADO'"></AppDatos>
+                    <AppDatos :active="true" :titulo="'DESIGNACION DE TRIBUNAL REVISOR DE GRADO'"></AppDatos>
+
+                    <div class="mt-3 space-y-2">
+                        <div class="field">
+                            <span class="mr-1" style="font-weight: bold;">Modalidad de Graduacion:</span>
+                            <span style="color: blue; font-weight: bold;">{{ modalidad }}</span>
+                        </div>
+                        <div class="field">
+                            <span class="mr-1" style="font-weight: bold;">Titulo del Trabajo de Grado:</span>
+                            <span style="color: blue; font-weight: bold;">{{ titulo }}</span>
+                        </div>
+                    </div><br>
 
                     <ListaArchivos :key="listaArchivosKey" ref="valRef" :valueArchivos="valueArchivos"
-                        :nomArchivos="nomArchivos" :mostrarObservacionesProp="true"
-                        :tabla="'aprobacion_perfil'" :nomDivision="'DOCUMENTOS DEL ESTUDIANTE'" />
+                        :nomArchivos="nomArchivos" :mostrarObservacionesProp="true" :tabla="'designacion_tribunal'"
+                        :nomDivision="'DOCUMENTOS DEL ESTUDIANTE'" />
 
                     <br><br>
 
@@ -58,6 +69,7 @@
 
                 </div>
             </div>
+            <!-- {{ datosrecividos }} -->
         </div>
     </div>
 
@@ -67,7 +79,7 @@
         <div class="flex align-items-center justify-content-center">
             <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
                 animationDuration=".5s" />
-            <span class="ml-3">Enviando, espere porfavor...</span>
+            <span class="ml-3">Enviando, espere por favor...</span>
         </div>
     </Dialog>
     <AppFooter></AppFooter>
@@ -80,13 +92,12 @@ import { ref, onMounted, watch } from 'vue';
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
 import AppDatos from './Components/Datos.vue';
-import ListaArchivos from './Components/ListaArchivos.vue';
+import ListaArchivos from './Components/ListaArchivos.vue'
 import workflowService from '@/services/workflow.service';
-import aprobacionPerfilService from '@/services/aprobacionPerfil.service';
 import documentService from '@/services/document.service';
+import designacionTribunalService from '@/services/designacionTribunal.service';
 import editDocumentService from '@/services/editDocument.service';
 
-// Variables reactivas
 const router = useRouter();
 const store = useStore();
 const loadingModal = ref(false);
@@ -94,54 +105,46 @@ const datosrecividos = store.getters.getData;
 const swdoc = !datosrecividos.fechafin;
 const corregido = ref(false);
 const modalidad = ref(null);
+const titulo = ref(null);
 const valRef = ref(null);
 const fileUrl = ref([]);
 const isPDF = ref([]);
+
 const listaArchivosKey = ref(0);
-const nomArchivos = ref([
-    '1. Nota dirigida al Director',
-    '2. Nota de aceptacion del tutor',
-    '3. Fotocopia simple de conclusion de estudios',
-    '4. Record academico',
-    '5. Perfil de grado'
-]);
-const valueArchivos = ref([
-    "nota_director",
-    "nota_tutor",
-    "conclusion_estudios",
-    "record_academico",
-    "perfil_grado"
-]);
-const nomdocumentos = ref([]);
+
+const nomArchivos = ref(['1. Nota de suficiencia del tutor', '2. Trabajo de Grado']);
+const valueArchivos = ref(["nota_suficiencia_tutor", "trabajo_grado"]);
+
+const nomdocumentos = ref([]); // Definición de `nomdocumentos`
 const nomArch = ref([]);
 const imagenesSeleccionadas = ref([]);
 
-// Hook onMounted
 onMounted(async () => {
-    const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'modalidad' };
+    const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'aprobacion_perfil_id' };
     try {
-        const response = await aprobacionPerfilService.obtenerColumna(dat);
-        modalidad.value = response.data;
+        const idP = await designacionTribunalService.obtenerColumna(dat);
+        const { data } = await designacionTribunalService.obtenerPerfilGradoId({ idPerfil: idP.data })
+
+        titulo.value = data[0].titulo
+        modalidad.value = data[0].modalidad
     } catch (error) {
         console.error('Error al obtener la modalidad:', error);
     }
 });
 
-// Watcher para modalidad
 watch(modalidad, (newModalidad) => {
     if (newModalidad && newModalidad !== 'Tesis') {
-        nomArchivos.value.push('6. Aceptacion formal de la propuesta por la Institucion o empresa');
-        valueArchivos.value.push('carta_institucion');
+        nomArchivos.value.push('3. Carta de conclusion de la Institucion o empresa');
+        valueArchivos.value.push('carta_conclusion_institucion');
         listaArchivosKey.value += 1;
     }
 }, { immediate: true });
 
-// Funciones principales
 function corregir() {
     if (!corregido.value) {
         const x = valRef.value.tabla;
         const archivosConObservaciones = x.filter(doc => doc.observaciones !== 'correcto');
-        nomdocumentos.value = archivosConObservaciones.map(doc => doc.archivo);
+        nomdocumentos.value = archivosConObservaciones.map(doc => doc.archivo); // Asignación de `nomdocumentos`
         nomArch.value = archivosConObservaciones.map(doc => doc.enlaces[0].nombre);
         imagenesSeleccionadas.value = Array.from({ length: nomdocumentos.value.length }, () => ref(null));
         corregido.value = true;
@@ -152,74 +155,44 @@ async function enviarTramite() {
     if (imagenesSeleccionadas.value.every(img => img.value !== null)) {
         const confirmed = confirm('¿Está seguro de enviar estos datos?');
         if (confirmed) {
-            await procesarEnvio();
+            const a = datosrecividos.nrotramite;
+            const enviarSolicitud = async (index) => {
+                if (index < imagenesSeleccionadas.value.length) {
+                    const imagen = imagenesSeleccionadas.value[index];
+                    if (imagen && imagen.value !== null) {
+                        const formData = new FormData();
+                        formData.append('file', imagen.value);
+                        formData.append('nombre', nomArch.value[index]);
+                        formData.append('nrotramite', a);
+                        formData.append('flujo', datosrecividos.flujo);
+                        formData.append('tabla', 'designacion_tribunal')
+
+                        try {
+                            await documentService.guardarDocumentos(formData)
+                        } catch (error) {
+                            alert(error);
+                        }
+                    }
+                    await enviarSolicitud(index + 1);
+                } else {
+                    const env = { 'flujo': datosrecividos.flujo, 'proceso': datosrecividos.proceso, 'tramiteId': a, 'comentario': 'correccion de datos del estudiante', 'condicion': '' };
+                    const response = await workflowService.siguienteproceso(env);
+                    if (response) {
+                        await generarHojaDeRuta(a);
+                    }
+                }
+            };
+            await enviarSolicitud(0);
+        } else {
+            // El usuario canceló
         }
     } else {
         alert('Cargue los documentos requeridos porfavor');
     }
 }
 
-async function procesarEnvio() {
-    const a = datosrecividos.nrotramite;
-    const enviarSolicitud = async (index) => {
-        if (index < imagenesSeleccionadas.value.length) {
-            await guardarDocumento(index, a);
-            await enviarSolicitud(index + 1);
-        } else {
-            const env = {
-                'flujo': datosrecividos.flujo,
-                'proceso': datosrecividos.proceso,
-                'tramiteId': a,
-                'comentario': 'correccion de datos',
-                'condicion': ''
-            };
-            const response = await workflowService.siguienteproceso(env);
-            if (response) {
-                await generarHojaDeRuta(a);
-            }
-        }
-    };
-    await enviarSolicitud(0);
-}
-
-async function guardarDocumento(index, nroTramite) {
-    const imagen = imagenesSeleccionadas.value[index];
-    if (imagen && imagen.value !== null) {
-        const formData = new FormData();
-        formData.append('file', imagen.value);
-        formData.append('nombre', nomArch.value[index]);
-        formData.append('nrotramite', nroTramite);
-        formData.append('flujo', datosrecividos.flujo);
-        formData.append('tabla', 'aprobacion_perfil');
-        try {
-            await documentService.guardarDocumentos(formData);
-        } catch (error) {
-            alert(error);
-        }
-    }
-}
-
-async function generarHojaDeRuta(nroTramite) {
-    const p = datosrecividos.proceso;
-    const r = datosrecividos.rol;
-    const f = datosrecividos.formulario;
-    const datosFormateados = { nrotramite: nroTramite, rol: r, ref: f, obs: ' -  corrección' };
-
-    loadingModal.value = true;
-    try {
-        await editDocumentService.editarDocumento(datosFormateados);
-        redireccionar("/hoja-ruta");
-    } catch (error) {
-        alert('Error al generar la hoja de ruta', error);
-        redireccionar("/tramite-pendiente");
-    } finally {
-        loadingModal.value = false;
-    }
-}
-
-// Funciones auxiliares
 function redireccionar(url) {
-    router.replace(url);
+    router.replace(url)
 }
 
 const handleFileUpload = (index, event) => {
@@ -235,8 +208,21 @@ const handleFileUpload = (index, event) => {
     }
 };
 
-</script>
+// Función para generar la Hoja de Ruta
+async function generarHojaDeRuta(nroTramite) {
+    const { rol, formulario } = datosrecividos;
+    const datosFormateados = { nrotramite: nroTramite, rol, ref: formulario, obs: ' -  corrección' };
 
-<style scoped>
-/* Puedes agregar tus estilos aquí */
-</style>
+    loadingModal.value = true;
+    try {
+        await editDocumentService.editarDocumento(datosFormateados);
+        redireccionar("/tramite-pendiente");
+    } catch (error) {
+        alert('Error al generar la hoja de ruta', error);
+        redireccionar("/tramite-pendiente");
+    } finally {
+        loadingModal.value = false;
+    }
+}
+
+</script>

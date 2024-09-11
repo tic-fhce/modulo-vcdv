@@ -6,27 +6,22 @@
         <div style="width: 90%;">
             <div class="card">
 
-                <AppDatos :active="true" :titulo="'CONCURSO DE MERITOS DE DOCENTES INTERINOS'"></AppDatos>
+                <AppDatos :active="true" :titulo="'DESIGNACION DE DOCENTES INTERINOS'"></AppDatos>
 
-                <div v-if="swdoc" class="flex justify-content-center p-fluid mt-5 md:flex md:flex-wrap">
-                    <div v-for="(documento, index) in nomdocumentos" :key="index" class="field col-3 md:col-3">
-                        <div class="center-content">
-                            <div class="preview-container">
-                                <img v-if="!fileUrl[index]" src="@/assets/images/img_document.png"
-                                    class="preview">
-                                <iframe v-else-if="isPDF[index]" :src="fileUrl[index]" class="preview"></iframe>
-                                <img v-else :src="fileUrl[index]" class="preview">
-                            </div>
-                            <div class="doc">
-                                <h4>{{ documento }}</h4>
-                                <label :for="'file-upload-' + index" class="custom-file-upload"> Cargar Documento
-                                </label>
-                                <input :id="'file-upload-' + index" accept=".pdf, image/*" type="file"
-                                    @change="handleFileUpload(index, $event)" style="display: none;">
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <h5>DOCENTES APROBADOS</h5>
+                <DataTable :value="orderlistValue" class="p-datatable-gridlines">
+                    <Column field="docente" header="Docente"></Column>
+                    <Column field="ci" header="C.I."></Column>
+                    <Column field="celular" header="Celular"></Column>
+                    <Column field="doc1" header="Documento 1"></Column>
+                    <Column field="doc2" header="Documento 2"></Column>
+                    <Column field="doc3" header="Documento 3"></Column>
+                </DataTable>
+
+                <h6 :style="{ color: 'blue', textTransform: 'uppercase' }">
+                    enviar a los docentes, para complementar los documentos faltantes
+                </h6>
+
                 <br><br>
 
                 <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
@@ -54,73 +49,42 @@ import AppTopbar from '@/layout/AppTopbar.vue';
 import AppMenu from '@/layout/bandeja/AppMenu.vue';
 import AppDatos from './Components/Datos.vue';
 import workflowService from '@/services/workflow.service';
-import documentService from '@/services/document.service';
 
 const router = useRouter()
 const store = useStore()
 
-const fileUrl = ref([])
-const isPDF = ref([false])
 const datosrecividos = store.getters.getData
 const swdoc = !datosrecividos.fechafin
 
-const nomArchivos = ["solicitud", "respaldo"]
-const nomdocumentos = ['1. Nota de solicitud', '2. Respaldo'];
-const imagenesSeleccionadas = Array.from({ length: 2 }, () => ref(null));
+const orderlistValue = ref([
+    { docente: 'Docente 1', ci: 'DC', celular: 'Dato 1', doc1: 'Dato 2', doc2: 'Dato 3', doc3: '' },
+    { docente: 'Docente 2', ci: 'DC', celular: 'Dato 1', doc1: 'Dato 2', doc2: 'Dato 3', doc3: '' },
+    { docente: 'Docente 3', ci: 'DC', celular: 'Dato 1', doc1: 'Dato 2', doc2: 'Dato 3', doc3: '' },
+]);
 
 
 async function enviarTramite() {
-    if (imagenesSeleccionadas.every(img => img.value !== null)) {
-        const confirmed = confirm('¿Está seguro de enviar estos datos?');
-        if (confirmed) {
-            const a = datosrecividos.nrotramite;
-            const enviarSolicitud = async (index) => {
-                if (index < imagenesSeleccionadas.length) {
-                    const imagen = imagenesSeleccionadas[index];
-                    if (imagen && imagen.value !== null) {
-                        const formData = new FormData();
-                        formData.append('file', imagen.value);
-                        formData.append('nombre', nomArchivos[index]);
-                        formData.append('nrotramite', a);
-                        formData.append('flujo', datosrecividos.flujo);
-                        formData.append('tabla', 'concurso_doc_interinos')
+    const confirmed = confirm('¿Esta seguro de enviar estos datos?');
+    if (confirmed) {
+        const a = datosrecividos.nrotramite
+        const b = datosrecividos.flujo
+        const c = datosrecividos.proceso
 
-                        try {
-                            await documentService.guardarDocumentos(formData)
-                            // await convalidacionPlanPlanService.guardarDocumentos(formData)
-                        } catch (error) {
-                            alert(error);
-                        }
-                    }
-                    await enviarSolicitud(index + 1); 
-                } else {
-                    const env = {'flujo': datosrecividos.flujo, 'proceso': datosrecividos.proceso, 'tramiteId': a, 'comentario': '', 'condicion': ''};
-                    await workflowService.siguienteproceso(env);
-                    redireccionar("/tramite-concluido")
-                }
-            };
-            await enviarSolicitud(0);
-        } else {
-            // El usuario canceló
+        try {
+            const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' }
+
+            await workflowService.siguienteproceso(env)
+
+        } catch (error) {
+            alert(error);
         }
+
+        router.push("/tramite-concluido");
     } else {
-        alert('Cargue los documentos requeridos porfavor');
+        // El usuario canceló
     }
+
 }
-
-const handleFileUpload = (index, event) => {
-    const nuevaImagen = event.target.files[0];
-    if (nuevaImagen) {
-        imagenesSeleccionadas[index].value = nuevaImagen;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            fileUrl.value[index] = e.target.result; // Guardar la URL de la imagen en el array correspondiente
-        };
-        reader.readAsDataURL(nuevaImagen);
-
-        isPDF.value[index] = nuevaImagen.type === 'application/pdf'; // Verificar si la imagen es PDF
-    }
-};
 
 function redireccionar(url) {
     router.replace(url)

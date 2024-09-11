@@ -4,12 +4,15 @@
     <div class="layout-main-container">
         <div style="width: 80%;">
             <div class="card">
-                <AppDatos :titulo="'CONVOCATORIA DE CONCURSO DE MERITOS PARA DOCENTES'"></AppDatos>
 
-                <ListaArchivos ref="valRef" :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
-                    :tabla="'convocatoria'" />
+                <AppDatos :active="true" :titulo="'CONCURSO DE MERITOS DE DOCENTES INTERINOS'"></AppDatos>
+
+                <ListaArchivos :valueArchivos="valueArchivos" :nomArchivos="nomArchivos" :tabla="'concurso_doc_interinos'" />
                 <br><br>
-                <h5>GENERAR LA CERTIFICACION DE CARGA HORARIA</h5>
+            </div>
+
+            <div class="card">
+                <h5>GENERAR LA NOTA DE ATENCION</h5>
                 <div v-if="loading" class="loading-icon">
                     <i class="pi pi-spin pi-spinner"></i> Cargando...
                 </div> <br>
@@ -41,13 +44,11 @@
                         </Column>
                         <Column v-if="swdoc" header="FIRMAR">
                             <template #body="{ data }">
-                                <Button @click="irAFirmar(data.tipo)" severity="info"><i class="pi pi-pencil">
+                                <Button @click="firmarDocumento(data)" severity="info"><i class="pi pi-pencil">
                                         Firmar</i></Button>
                             </template>
                         </Column>
                     </DataTable>
-
-
                 </div>
                 <br><br>
                 <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
@@ -57,8 +58,7 @@
                 <div v-else class="flex justify-content-left flex-wrap gap-3">
                     <Button @click="redireccionar('/tramite-pendiente')" severity="warning"><i
                             class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
-                    <Button @click="enviarTramite()" :disabled="!uploadDone"><i
-                            class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
+                    <Button @click="enviarTramite()" :disabled="!uploadDone"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
                 </div>
             </div>
             <!-- {{ datosrecividos }} -->
@@ -71,15 +71,14 @@
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 import { createApp, ref, computed, onMounted } from 'vue';
-import { globalStore } from '../../../../pages/globalStore'
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
 import AppDatos from './Components/Datos.vue';
 import ListaArchivos from './Components/ListaArchivos.vue'
 import workflowService from '@/services/workflow.service';
-import convocatoriaService from '@/services/convocatoria.service'
+import concursoDocInterinos from '@/services/concursoDocInterinos.service'
 import documentService from '@/services/document.service';
-import { handleUpload, handleUrl, handleDownload } from './Components/driveServiceConvocatoria.js'
+import { handleUpload, handleUrl, handleDownload } from './Components/driveServiceConcurso'
 
 const router = useRouter()
 const store = useStore()
@@ -88,21 +87,19 @@ const swdoc = !datosrecividos.fechafin
 const uploadDone = ref(false);
 const urlDoc = ref()
 const loading = ref(false)
-const docDrive = 'CERTIFICACION CARGA HORARIA.docx'
+const docDrive = ref('NOTA CONCURSO MERITOS DOCENTES INTERINOS.docx')
 
-const comentario = ref('')
-const cond = ref('si')
-const valRef = ref(null)
 
-const documentos = [{ archivo: '1. Certificacion de carga horaria', url: urlDoc, tipo: 'certificacion_carga_horaria' }]
+const documentos = [{ archivo: '1. Nota de atencion', url: urlDoc, tipo: 'nota_vic' }]
 
-const nomArchivos = ref(['1. Convocatoria concurso de meritos']);
-const valueArchivos = ref(["convocatoria"]);
+const nomArchivos = ref(['1. Nota de solicitud', '2. Respaldo']);
+const valueArchivos = ref(["solicitud", "respaldo"]);
+
 
 onMounted(async () => {
-    const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'c_certificacion_carga_horaria' };
+    const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'c_nota_vic' };
     try {
-        const res = await convocatoriaService.obtenerColumna(dat);
+        const res = await concursoDocInterinos.obtenerColumna(dat);
         if (res.data != '') {
             uploadDone.value = true
             getDocumentUrl();
@@ -138,7 +135,7 @@ async function enviarTramite() {
 async function uploadDocument() {
     loading.value = true
     try {
-        const message = await handleUpload(docDrive, datosrecividos.nrotramite, 'c_certificacion_carga_horaria');
+        const message = await handleUpload(docDrive.value, datosrecividos.nrotramite, 'c_nota_vic');
         alert(message);
         uploadDone.value = true;
         if (uploadDone.value) {
@@ -153,7 +150,7 @@ async function uploadDocument() {
 async function getDocumentUrl() {
     loading.value = true
     try {
-        urlDoc.value = await handleUrl(datosrecividos.nrotramite, 'c_certificacion_carga_horaria');
+        urlDoc.value = await handleUrl(datosrecividos.nrotramite, 'c_nota_vic');
     } finally {
         loading.value = false
     }
@@ -163,7 +160,7 @@ async function getDocumentUrl() {
 async function downloadDocument() {
     loading.value = true
     try {
-        const message = await handleDownload(datosrecividos.nrotramite, 'c_certificacion_carga_horaria', 'certificacion_carga_horaria', datosrecividos.flujo, 'convocatoria');
+        const message = await handleDownload(datosrecividos.nrotramite, 'c_nota_vic', 'nota_vic', datosrecividos.flujo, 'concurso_doc_interinos');
         alert(message);
     } finally {
         loading.value = false
@@ -188,7 +185,7 @@ function redirectDocument() {
 async function cargarDocumento(nombreDocumento) {
     try {
         const nt = datosrecividos.nrotramite;
-        const dat = { nombre: nombreDocumento, nrotramite: nt, tabla: 'convocatoria', flujo: datosrecividos.flujo };
+        const dat = { nombre: nombreDocumento, nrotramite: nt, tabla: 'concurso_doc_interinos', flujo: datosrecividos.flujo };
         const response = await documentService.recuperarDocumentos(dat);
         const archivoBlob = new Blob([response.data], { type: response.headers['content-type'] });
         const archivoURL = URL.createObjectURL(archivoBlob);
@@ -199,25 +196,9 @@ async function cargarDocumento(nombreDocumento) {
 
 }
 
-async function irAFirmar(nombreDocumento) {
-    try {
-        const nt = datosrecividos.nrotramite;
-        const dat = { nombre: nombreDocumento, nrotramite: nt, tabla: 'convocatoria', flujo: datosrecividos.flujo };
-        const response = await documentService.recuperarDocumentos(dat);
-        const archivoBlob = new Blob([response.data], { type: response.headers['content-type'] });
+async function firmarDocumento(documento) {
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64data = reader.result.split(',')[1];
-            globalStore.documento = base64data;
-            router.push({ name: 'firmar' });
-        };
-        reader.readAsDataURL(archivoBlob);
-    } catch (error) {
-        alert('Descargue el documento antes por favor');
-    }
 }
-
 
 
 function redireccionar(url) {

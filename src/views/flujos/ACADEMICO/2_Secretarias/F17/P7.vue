@@ -5,8 +5,10 @@
         <div class="col-12 mb-2 lg:col-11 lg:mb-0">
             <div class="card">
 
-                <AppDatos :active="true" :titulo="'DESIGNACION DE TRIBUNAL REVISOR DE GRADO'"></AppDatos>
+                <!-- Datos Principales -->
+                <AppDatos :active="true" :titulo="'APROBACION DE PERFIL DE GRADO'"></AppDatos>
 
+                <!-- Modalidad y Título -->
                 <div class="mt-3 space-y-2">
                     <div class="field">
                         <span class="mr-1" style="font-weight: bold;">Modalidad de Graduacion:</span>
@@ -18,23 +20,24 @@
                     </div>
                 </div><br>
 
-                <ListaArchivos :key="listaArchivosKey" :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
-                    :tabla="'designacion_tribunal'" :nomDivision="'DOCUMENTOS DE APROBACION DE TRIBUNAL'" />
+                <!-- Lista de Archivos -->
+                <ListaArchivos :valueArchivos="valueArchivos1" :nomArchivos="nomArchivos1" :tabla="'aprobacion_perfil'"
+                    :nomDivision="'RESOLUCION'" />
 
-            </div>
-
-            <div class="card">
-
-                <DocumentTable ref="docRef" :documentos="documentos"></DocumentTable><br>
-
+                <br><br>
+                <h6 style="color: blue;">ENTREGA DE RESOLUCION AL ESTUDIANTE Y FIN DE TRAMITE</h6>
                 <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
-                    <Button @click="redireccionar('/tramite-concluido')" severity="warning"><i
-                            class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
+                    <Button @click="redireccionar('/tramite-concluido')" severity="warning">
+                        <i class="pi pi-arrow-left">&nbsp;Regresar</i>
+                    </Button>
                 </div>
                 <div v-else class="flex justify-content-left flex-wrap gap-3">
-                    <Button @click="redireccionar('/tramite-pendiente')" severity="warning"><i
-                            class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
-                    <Button @click="enviarTramite()"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
+                    <Button @click="redireccionar('/tramite-pendiente')" severity="warning">
+                        <i class="pi pi-arrow-left">&nbsp;Regresar</i>
+                    </Button>
+                    <Button @click="enviarTramite()">
+                        <i class="pi pi-arrow-right text">Enviar&nbsp;</i>
+                    </Button>
                 </div>
             </div>
         </div>
@@ -49,7 +52,6 @@
             <span class="ml-3">Enviando, espere por favor...</span>
         </div>
     </Dialog>
-
     <AppFooter></AppFooter>
 </template>
 
@@ -57,76 +59,67 @@
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 import { ref, onMounted, watch } from 'vue';
+
+// Componentes
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
 import AppDatos from './Components/Datos.vue';
-import ListaArchivos from './Components/ListaArchivos.vue'
+import ListaArchivos from './Components/ListaArchivos.vue';
+
+// Servicios
 import workflowService from '@/services/workflow.service';
-import designacionTribunalService from '@/services/designacionTribunal.service';
-import DocumentTable from './Components/GenerarDocumentos.vue';
+import aprobacionPerfilService from '@/services/aprobacionPerfil.service';
 import editDocumentService from '@/services/editDocument.service';
 
-const router = useRouter()
-const store = useStore()
+// Variables reactivas y referencias
+const router = useRouter();
+const store = useStore();
 const loadingModal = ref(false);
-const datosrecividos = store.getters.getData
-const swdoc = !datosrecividos.fechafin
-const modalidad = ref()
-const titulo = ref()
+const datosrecividos = store.getters.getData;
+const swdoc = !datosrecividos.fechafin;
+const modalidad = ref();
+const titulo = ref();
 const listaArchivosKey = ref(0);
-const docRef = ref(null)
 
-const documentos = [
-    { nombre: '1. Resolucion de Tribunal de Grado', archivo: 'F18 D3 RESOLUCION TRIBUNAL DE GRADO.docx', value: 'resolucion_tribunal', url: '' }
-]
+const nomArchivos1 = ref(['1. Resolucion de Perfil de Grado']);
+const valueArchivos1 = ref(["resolucion_perfil"]);
 
-const nomArchivos = ref(['1. Proyecto de Resolucion de Designacion de Tribunal de Grado', '2. Solicitud de aprobacion de Proyecto de Resolucion']);
-const valueArchivos = ref(["proyecto_resolucion_tribunal", "solicitud_tribunal"]);
-
+// Hook onMounted para inicializar los datos
 onMounted(async () => {
-    const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'aprobacion_perfil_id' };
     try {
-        const idP = await designacionTribunalService.obtenerColumna(dat);
-        const { data } = await designacionTribunalService.obtenerPerfilGradoId({ idPerfil: idP.data })
+        const dat = { nrotramite: datosrecividos.nrotramite, columna: 'modalidad' };
+        const dat1 = { nrotramite: datosrecividos.nrotramite, columna: 'titulo' };
+        const response = await aprobacionPerfilService.obtenerColumna(dat);
+        const response1 = await aprobacionPerfilService.obtenerColumna(dat1);
 
-        titulo.value = data[0].titulo
-        modalidad.value = data[0].modalidad
+        modalidad.value = response.data;
+        titulo.value = response1.data;
     } catch (error) {
         console.error('Error al obtener la modalidad:', error);
     }
 });
 
+// Función para enviar el trámite
 async function enviarTramite() {
-    const confirmed = confirm('¿Esta seguro de enviar estos datos?');
+    const confirmed = confirm('¿Está seguro de enviar estos datos?');
     if (confirmed) {
-        const a = datosrecividos.nrotramite
-        const b = datosrecividos.flujo
-        const c = datosrecividos.proceso
-
         try {
-            const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' }
+            const { nrotramite, flujo, proceso } = datosrecividos;
+            const env = { flujo, proceso, tramiteId: nrotramite, comentario: '', condicion: '' };
 
             const response = await workflowService.siguienteproceso(env);
             if (response) {
-                await generarHojaDeRuta(a);
+                await generarHojaDeRuta(nrotramite);
             }
 
+            router.push("/tramite-concluido");
         } catch (error) {
             alert(error);
         }
-
-        router.push("/tramite-concluido");
-    } else {
-        // El usuario canceló
     }
-
 }
 
-function redireccionar(url) {
-    router.replace(url)
-}
-
-// Función para generar la Hoja de Ruta
+// Función para generar la hoja de ruta
 async function generarHojaDeRuta(nroTramite) {
     const { rol, formulario } = datosrecividos;
     const datosFormateados = { nrotramite: nroTramite, rol, ref: formulario, obs: '' };
@@ -142,4 +135,13 @@ async function generarHojaDeRuta(nroTramite) {
         loadingModal.value = false;
     }
 }
+
+// Función para redireccionar
+function redireccionar(url) {
+    router.replace(url);
+}
 </script>
+
+<style scoped>
+/* Estilos personalizados aquí */
+</style>

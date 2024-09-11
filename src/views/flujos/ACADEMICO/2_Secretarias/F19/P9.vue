@@ -6,21 +6,43 @@
             <div class="grid p-fluid">
                 <div class="card">
 
-                    <AppDatos :active="true" :titulo="'DESIGNACION DE TRIBUNAL REVISOR DE GRADO'"></AppDatos>
+                    <AppDatos :active="true" :titulo="'CAMBIO DE MODALIDAD, TITULO o TUTOR DE GRADO'"></AppDatos>
+
+                    <!-- Modalidad y Título -->
+                    <div class="mt-3 space-y-2">
+                        <div class="field">
+                            <span class="mr-1 font-bold">Modalidad de Graduacion Actual:</span>
+                            <span style="color: blue; font-weight: bold;">{{ modalidadActualSeleccionada }}</span>
+                        </div>
+                        <div class="field">
+                            <span class="mr-1 font-bold">Titulo Actual del Trabajo de Grado:</span>
+                            <span style="color: blue; font-weight: bold;">{{ tituloActual }}</span>
+                        </div>
+                    </div>
+                    <br />
+                </div>
+
+                <div class="card">
+                    <h5 style="color: red; text-align: center;">SOLICITUD DE CAMBIO</h5><br>
 
                     <div class="mt-3 space-y-2">
                         <div class="field">
-                            <span class="mr-1" style="font-weight: bold;">Modalidad de Graduacion:</span>
-                            <span style="color: blue; font-weight: bold;">{{ modalidad }}</span>
+                            <span class="mr-1 font-bold">Cambio de:</span>
+                            <span style="color: blue; font-weight: bold;">{{ cambio }} </span>
                         </div>
-                        <div class="field">
-                            <span class="mr-1" style="font-weight: bold;">Titulo del Trabajo de Grado:</span>
-                            <span style="color: blue; font-weight: bold;">{{ titulo }}</span>
+                        <div class="field" v-if="cambio == 'Modalidad'">
+                            <span class="mr-1 font-bold">Modalidad de Graduacion:</span>
+                            <span style="color: blue; font-weight: bold;">{{ n_modalidad }}</span>
                         </div>
-                    </div><br>
+                        <div class="field" v-if="cambio == 'Modalidad' || cambio == 'Titulo'">
+                            <span class="mr-1 font-bold">Titulo del Trabajo de Grado:</span>
+                            <span style="color: blue; font-weight: bold;">{{ n_titulo }}</span>
+                        </div>
+                    </div>
+                    <br />
 
                     <ListaArchivos :key="listaArchivosKey" ref="valRef" :valueArchivos="valueArchivos"
-                        :nomArchivos="nomArchivos" :mostrarObservacionesProp="true" :tabla="'designacion_tribunal'"
+                        :nomArchivos="nomArchivos" :mostrarObservacionesProp="true" :tabla="'cambio_modalidad'"
                         :nomDivision="'DOCUMENTOS DEL ESTUDIANTE'" />
 
                     <br><br>
@@ -32,9 +54,9 @@
                     </div>
 
                     <div class="field grid">
-                        <div v-if="swdoc" class="flex flex-wrap md:flex md:flex-wrap justify-content-center gap-3">
-                            <div v-for="(documento, index) in nomdocumentos" :key="index"
-                                :class="{ 'col-12': true, 'md:col-8': nomdocumentos.length === 1, 'md:col-3': nomdocumentos.length > 1, 'md:col-3': true, 'mt-3': true }">
+                        <div v-if="swdoc" class="flex flex-wrap md:flex md:flex-wrap justify-content-center gap-3"
+                            style="width: 100%;">
+                            <div v-for="(documento, index) in nomdocumentos" :key="index" class="col-12 md:col-3 mt-3">
                                 <div class="center-content" style="border: 2px solid rgba(221, 221, 221, 0.937);">
                                     <div class="preview-container">
                                         <img v-if="!fileUrl[index]" src="@/assets/images/img_document.png"
@@ -72,6 +94,16 @@
             <!-- {{ datosrecividos }} -->
         </div>
     </div>
+
+    <!-- Modal de Carga -->
+    <Dialog v-model:visible="loadingModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
+        header="Cargando datos">
+        <div class="flex align-items-center justify-content-center">
+            <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
+                animationDuration=".5s" />
+            <span class="ml-3">Enviando, espere porfavor...</span>
+        </div>
+    </Dialog>
     <AppFooter></AppFooter>
 </template>
 
@@ -84,49 +116,66 @@ import AppTopbar from '@/layout/AppTopbar.vue';
 import AppDatos from './Components/Datos.vue';
 import ListaArchivos from './Components/ListaArchivos.vue'
 import workflowService from '@/services/workflow.service';
+import aprobacionPerfilService from '@/services/aprobacionPerfil.service';
 import documentService from '@/services/document.service';
+
+import cambioModalidadService from '@/services/cambioModalidad.service';
 import designacionTribunalService from '@/services/designacionTribunal.service';
+import editDocumentService from '@/services/editDocument.service';
 
 const router = useRouter();
 const store = useStore();
+const loadingModal = ref(false);
 const datosrecividos = store.getters.getData;
 const swdoc = !datosrecividos.fechafin;
 const corregido = ref(false);
 const modalidad = ref(null);
-const titulo = ref(null);
 const valRef = ref(null);
 const fileUrl = ref([]);
 const isPDF = ref([]);
 
 const listaArchivosKey = ref(0);
 
-const nomArchivos = ref(['1. Nota de suficiencia del tutor', '2. Trabajo de Grado']);
-const valueArchivos = ref(["nota_suficiencia_tutor", "trabajo_grado"]);
+const tituloActual = ref('');
+const modalidadActualSeleccionada = ref();
+
+const cambio = ref()
+const n_modalidad = ref()
+const n_titulo = ref()
+const n_tutor = ref()
+
+const nomArchivos = ref(['1. Nota dirigida al Director', '2. Nota de aceptacion del tutor', '3. Perfil de grado']);
+const valueArchivos = ref(["nota_director", "nota_tutor", "perfil_grado"]);
 
 const nomdocumentos = ref([]); // Definición de `nomdocumentos`
 const nomArch = ref([]);
 const imagenesSeleccionadas = ref([]);
 
 onMounted(async () => {
-    const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'aprobacion_perfil_id' };
+    const dat = { 'nrotramite': datosrecividos.nrotramite };
     try {
-        const idP = await designacionTribunalService.obtenerColumna(dat);
-        const { data } = await designacionTribunalService.obtenerPerfilGradoId({ idPerfil: idP.data })
+        const resp = await cambioModalidadService.obtenerFila(dat);
+        cambio.value = resp.data.cambio
+        n_modalidad.value = resp.data.n_modalidad
+        n_titulo.value = resp.data.n_titulo
+        n_tutor.value = resp.data.n_tutor
 
-        titulo.value = data[0].titulo
-        modalidad.value = data[0].modalidad
+        const { data } = await designacionTribunalService.obtenerPerfilGradoId({ idPerfil: resp.data.aprobacion_perfil_id });
+        modalidadActualSeleccionada.value = data[0].modalidad;
+        tituloActual.value = data[0].titulo;
+
+        if (cambio.value == 'Modalidad') {
+            if (n_modalidad.value != 'Tesis') {
+                nomArchivos.value.push('4. Carta de aceptacion de propuesta por la Institucion o empresa')
+                valueArchivos.value.push('carta_institucion')
+                listaArchivosKey.value += 1;
+            }
+        }
+
     } catch (error) {
         console.error('Error al obtener la modalidad:', error);
     }
 });
-
-watch(modalidad, (newModalidad) => {
-    if (newModalidad && newModalidad !== 'Tesis') {
-        nomArchivos.value.push('3. Carta de conclusion de la Institucion o empresa');
-        valueArchivos.value.push('carta_conclusion_institucion');
-        listaArchivosKey.value += 1;
-    }
-}, { immediate: true });
 
 function corregir() {
     if (!corregido.value) {
@@ -153,7 +202,7 @@ async function enviarTramite() {
                         formData.append('nombre', nomArch.value[index]);
                         formData.append('nrotramite', a);
                         formData.append('flujo', datosrecividos.flujo);
-                        formData.append('tabla', 'designacion_tribunal')
+                        formData.append('tabla', 'cambio_modalidad')
 
                         try {
                             await documentService.guardarDocumentos(formData)
@@ -164,8 +213,10 @@ async function enviarTramite() {
                     await enviarSolicitud(index + 1);
                 } else {
                     const env = { 'flujo': datosrecividos.flujo, 'proceso': datosrecividos.proceso, 'tramiteId': a, 'comentario': 'correccion de datos del estudiante', 'condicion': '' };
-                    await workflowService.siguienteproceso(env);
-                    redireccionar("/tramite-concluido")
+                    const response = await workflowService.siguienteproceso(env);
+                    if (response) {
+                        await generarHojaDeRuta(a);
+                    }
                 }
             };
             await enviarSolicitud(0);
@@ -193,5 +244,22 @@ const handleFileUpload = (index, event) => {
         isPDF.value.splice(index, 1, nuevaImagen.type === 'application/pdf');
     }
 };
+
+async function generarHojaDeRuta(nroTramite) {
+    const r = datosrecividos.rol;
+    const f = datosrecividos.formulario;
+    const datosFormateados = { nrotramite: nroTramite, rol: r, ref: f, obs: ' -  corrección' };
+
+    loadingModal.value = true;
+    try {
+        await editDocumentService.editarDocumento(datosFormateados);
+        redireccionar("/hoja-ruta");
+    } catch (error) {
+        alert('Error al generar la hoja de ruta', error);
+        redireccionar("/tramite-pendiente");
+    } finally {
+        loadingModal.value = false;
+    }
+}
 
 </script>

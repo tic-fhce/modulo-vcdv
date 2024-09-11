@@ -73,19 +73,19 @@ const nestedMenuitems = ref([
     command: () => redireccionar('/tramite-concluido')
   },
   {
-    label: 'Iniciar un Nuevo Tramite',
-    icon: 'pi pi-briefcase',
-    command: () => redireccionar('/nuevo-flujo')
-  },
-  {
     label: 'Seguimiento al Tramite',
     icon: 'pi pi-book',
     command: () => redireccionar('/hoja-ruta')
   },
   {
-    label: 'Tutoriales',
-    icon: 'pi pi-book'
-  }
+    label: 'Iniciar un Nuevo Tramite',
+    icon: 'pi pi-briefcase',
+    command: () => redireccionar('/nuevo-flujo')
+  },
+  // {
+  //   label: 'Tutoriales',
+  //   icon: 'pi pi-book'
+  // }
 ]);
 
 const overlayMenuItems = ref([

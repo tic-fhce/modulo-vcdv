@@ -2,6 +2,8 @@
   <div class="">
     <div class="documentos">
       <DataTable :value="documentosTabla" :paginator="false">
+        <Column field="docente" header="DOCENTE" v-if="mostrarDocente"></Column>
+
         <Column field="archivo" header="DOCUMENTO"></Column>
         <Column header="ENLACES">
           <template #body="{ data }">
@@ -59,6 +61,7 @@ const mostrarRevision = ref(true);
 const sw = ref(false)
 const swdoc = !datosrecividos.fechafin
 const swfirmar = ref(null)
+const mostrarDocente = ref(false)
 
 const props = defineProps({
   valueArchivos: Array,
@@ -66,7 +69,8 @@ const props = defineProps({
   mostrarObservacionesProp: Boolean,
   mostrarRevision: Boolean,
   tabla: String,
-  swfirmar: String
+  swfirmar: String,
+  mostrarDocente: Boolean,
 });
 
 
@@ -74,6 +78,7 @@ onMounted(() => {
   mostrarObservaciones.value = props.mostrarObservacionesProp
   mostrarRevision.value = props.mostrarRevision
   swfirmar.value = props.swfirmar
+  mostrarDocente.value = props.mostrarDocente
 });
 
 onMounted(async () => {
@@ -100,7 +105,8 @@ const shouldShowFirmarButton = computed(() => {
 const documentos = ref({});
 const documentosTabla = computed(() => {
   return props.valueArchivos.map((archivo, index) => ({
-    archivo: props.nomArchivos[index],
+    docente: 'Docente 1',
+    archivo: props.nomArchivos[index],    
     observaciones: documentos.value[index],
     enlaces: [
       { nombre: props.valueArchivos[index], enlace: '#' }

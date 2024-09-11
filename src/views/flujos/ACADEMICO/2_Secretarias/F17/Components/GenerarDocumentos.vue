@@ -168,7 +168,7 @@ async function verDocumento(value) {
 }
 
 async function firmarDocumento(documento) {
-    // Añade la lógica para firmar el documento si es necesario
+    
 }
 
 

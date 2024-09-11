@@ -5,32 +5,35 @@
         <div class="col-12 mb-2 lg:col-11 lg:mb-0">
             <div class="card">
 
-                <!-- Título del Componente -->
-                <AppDatos :active="true" :titulo="'DESIGNACION DE TRIBUNAL REVISOR DE GRADO'"></AppDatos>
+                <!-- Datos Principales -->
+                <AppDatos :active="true" :titulo="'APROBACION DE PERFIL DE GRADO'"></AppDatos>
 
-                <!-- Información General -->
+                <!-- Modalidad y Título -->
                 <div class="mt-3 space-y-2">
                     <div class="field">
-                        <span class="mr-1 font-bold">Modalidad de Graduacion:</span>
+                        <span class="mr-1" style="font-weight: bold;">Modalidad de Graduacion:</span>
                         <span style="color: blue; font-weight: bold;">{{ modalidad }}</span>
                     </div>
                     <div class="field">
-                        <span class="mr-1 font-bold">Titulo del Trabajo de Grado:</span>
+                        <span class="mr-1" style="font-weight: bold;">Titulo del Trabajo de Grado:</span>
                         <span style="color: blue; font-weight: bold;">{{ titulo }}</span>
                     </div>
                 </div>
                 <br>
 
                 <!-- Lista de Archivos -->
-                <ListaArchivos 
-                    :valueArchivos="valueArchivos" 
-                    :nomArchivos="nomArchivos" 
-                    :tabla="'designacion_tribunal'" 
-                    :nomDivision="'DOCUMENTOS DEL ESTUDIANTE'" 
-                />
-                <br><br>
+                <ListaArchivos :key="listaArchivosKey" :valueArchivos="valueArchivos"
+                    :nomArchivos="nomArchivos" :tabla="'aprobacion_perfil'" 
+                    :nomDivision="'DOCUMENTOS DE APROBACION DE PERFIL'" />
+                
+            </div>
 
-                <!-- Botones de Navegación -->
+            <div class="card">
+                
+                <!-- Tabla de Documentos -->
+                <DocumentTable ref="docRef" :documentos="documentos"></DocumentTable><br>
+
+                <!-- Botones de Acción -->
                 <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
                     <Button @click="redireccionar('/tramite-concluido')" severity="warning">
                         <i class="pi pi-arrow-left">&nbsp;Regresar</i>
@@ -64,15 +67,20 @@
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 import { ref, onMounted } from 'vue';
+
+// Componentes
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
 import AppDatos from './Components/Datos.vue';
 import ListaArchivos from './Components/ListaArchivos.vue';
+import DocumentTable from './Components/GenerarDocumentos.vue';
+
+// Servicios
 import workflowService from '@/services/workflow.service';
-import designacionTribunalService from '@/services/designacionTribunal.service';
+import aprobacionPerfilService from '@/services/aprobacionPerfil.service';
 import editDocumentService from '@/services/editDocument.service';
 
-// Variables y Referencias
+// Variables reactivas y referencias
 const router = useRouter();
 const store = useStore();
 const loadingModal = ref(false);
@@ -80,32 +88,32 @@ const datosrecividos = store.getters.getData;
 const swdoc = !datosrecividos.fechafin;
 const modalidad = ref();
 const titulo = ref();
+const listaArchivosKey = ref(0);
+const docRef = ref(null);
 
-// Archivos y Nombres de Archivos
+const documentos = [
+    { nombre: '1. Resolucion de Perfil de Grado', archivo: 'F17 D3 RESOLUCION PERFIL DE GRADO.docx', value: 'resolucion_perfil', url: '' }
+];
+
 const nomArchivos = ref([
-    '1. Nota de suficiencia del tutor', 
-    '2. Trabajo de Grado'
+    '1. Proyecto de Resolucion de Perfil de Grado',
+    '2. Solicitud de aprobacion de Proyecto de Resolucion'
 ]);
 const valueArchivos = ref([
-    "nota_suficiencia_tutor", 
-    "trabajo_grado"
+    "proyecto_resolucion_perfil",
+    "solicitud_aprobacion_perfil"
 ]);
 
-// Hook para obtener datos cuando el componente se monta
+// Hook onMounted para inicializar los datos
 onMounted(async () => {
     try {
-        const dat = { nrotramite: datosrecividos.nrotramite, columna: 'aprobacion_perfil_id' };
-        const idP = await designacionTribunalService.obtenerColumna(dat);
-        const { data } = await designacionTribunalService.obtenerPerfilGradoId({ idPerfil: idP.data });
+        const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'modalidad' };
+        const dat1 = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'titulo' };
+        const response = await aprobacionPerfilService.obtenerColumna(dat);
+        const response1 = await aprobacionPerfilService.obtenerColumna(dat1);
 
-        titulo.value = data[0].titulo;
-        modalidad.value = data[0].modalidad;
-
-        // Agregar documento extra si la modalidad no es 'Tesis'
-        if (modalidad.value.data !== 'Tesis') {
-            nomArchivos.value.push('3. Carta de conclusion de la Institucion o empresa');
-            valueArchivos.value.push('carta_conclusion_institucion');
-        }
+        modalidad.value = response.data;
+        titulo.value = response1.data;
     } catch (error) {
         console.error('Error al obtener la modalidad:', error);
     }
@@ -113,38 +121,31 @@ onMounted(async () => {
 
 // Función para enviar el trámite
 async function enviarTramite() {
-    const confirmed = confirm('¿Está seguro de enviar estos datos?');
+    const confirmed = confirm('¿Esta seguro de enviar estos datos?');
     if (confirmed) {
         try {
-            await procesarTramite();
+            const a = datosrecividos.nrotramite;
+            const b = datosrecividos.flujo;
+            const c = datosrecividos.proceso;
+            const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' };
+
+            const response = await workflowService.siguienteproceso(env);
+            if (response) {
+                await generarHojaDeRuta(a);
+            }
+
+            router.push("/tramite-concluido");
         } catch (error) {
             alert(error);
         }
     }
 }
 
-// Función para procesar el trámite
-async function procesarTramite() {
-    const { nrotramite, flujo, proceso } = datosrecividos;
-
-    const env = { 
-        flujo, 
-        proceso, 
-        tramiteId: nrotramite, 
-        comentario: '', 
-        condicion: '' 
-    };
-
-    const response = await workflowService.siguienteproceso(env);
-    if (response) {
-        await generarHojaDeRuta(nrotramite);
-    }
-}
-
-// Función para generar la Hoja de Ruta
+// Función para generar la hoja de ruta
 async function generarHojaDeRuta(nroTramite) {
-    const { rol, formulario } = datosrecividos;
-    const datosFormateados = { nrotramite: nroTramite, rol, ref: formulario, obs: '' };
+    const r = datosrecividos.rol;
+    const f = datosrecividos.formulario;
+    const datosFormateados = { nrotramite: nroTramite, rol: r, ref: f, obs: '' };
 
     loadingModal.value = true;
     try {
@@ -158,12 +159,12 @@ async function generarHojaDeRuta(nroTramite) {
     }
 }
 
-// Función para redireccionar a una URL
+// Función para redireccionar
 function redireccionar(url) {
     router.replace(url);
 }
 </script>
 
 <style scoped>
-/* Puedes agregar tus estilos aquí */
+/* Estilos personalizados aquí */
 </style>

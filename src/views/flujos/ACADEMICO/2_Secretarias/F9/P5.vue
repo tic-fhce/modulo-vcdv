@@ -5,14 +5,15 @@
         <div style="width: 80%;">
             <div class="card">
 
-                <AppDatos :active="true" :titulo="'CONCURSO DE MERITOS DE DOCENTES INTERINOS'"></AppDatos>
+                <AppDatos :active="true" :titulo="'DESIGNACION DE DOCENTES INTERINOS'"></AppDatos>
 
-                <ListaArchivos :valueArchivos="valueArchivos" :nomArchivos="nomArchivos" :tabla="'concurso_doc_interinos'" />
+                <ListaArchivos :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
+                    :mostrarObservacionesProp="true" :mostrarDocente="true" :tabla="'designacion_doc_interinos'" />
                 <br><br>
             </div>
 
             <div class="card">
-                <h5>GENERAR EL INFORME DE DISPOSICION DE FECHAS PARA SUBSANAR OBSERVACIONES</h5>
+                <h5>GENERAR LA RESOLUCION </h5>
                 <div v-if="loading" class="loading-icon">
                     <i class="pi pi-spin pi-spinner"></i> Cargando...
                 </div> <br>
@@ -28,7 +29,6 @@
                     </Button>
                 </div>
                 <br><br>
-                <h6 :style="{ color: 'blue', textTransform: 'uppercase' }"> Publicar el Informe de Disposicion de fechas </h6>
                 <div v-if="uploadDone">
                     <DataTable :value="documentos" :paginator="false">
                         <Column header="DOCUMENTO">
@@ -59,7 +59,8 @@
                 <div v-else class="flex justify-content-left flex-wrap gap-3">
                     <Button @click="redireccionar('/tramite-pendiente')" severity="warning"><i
                             class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
-                    <Button @click="enviarTramite()" :disabled="!uploadDone"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
+                    <Button @click="enviarTramite()" :disabled="!uploadDone"><i
+                            class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
                 </div>
             </div>
             <!-- {{ datosrecividos }} -->
@@ -77,9 +78,9 @@ import AppTopbar from '@/layout/AppTopbar.vue';
 import AppDatos from './Components/Datos.vue';
 import ListaArchivos from './Components/ListaArchivos.vue'
 import workflowService from '@/services/workflow.service';
-import concursoDocInterinos from '@/services/concursoDocInterinos.service'
+import designacionDocInterinos from '@/services/designacionDocInterinos.service'
 import documentService from '@/services/document.service';
-import { handleUpload, handleUrl, handleDownload } from './Components/driveServiceConcurso'
+import { handleUpload, handleUrl, handleDownload } from './Components/driveServiceDesignacion'
 
 const router = useRouter()
 const store = useStore()
@@ -88,19 +89,19 @@ const swdoc = !datosrecividos.fechafin
 const uploadDone = ref(false);
 const urlDoc = ref()
 const loading = ref(false)
-const docDrive = ref('INFORME DE DISPOSICION DE FECHAS DOCENTES INTERINOS.docx')
+const docDrive = ref('RESOLUCION DESIGNACION DOCENTES INTERINOS.docx')
 
 
-const documentos = [{ archivo: '1. Informe de Fechas de Subsanacion', url: urlDoc, tipo: 'informe_obs' }]
+const documentos = [{ archivo: '1. Resolucion', url: urlDoc, tipo: 'resolucion' }]
 
-const nomArchivos = ref(['1. Informe de Evaluacion']);
-const valueArchivos = ref(["informe_conv"]);
+const nomArchivos = ref(['1. Proyecto de Resolucion']);
+const valueArchivos = ref(["proy_resolucion"]);
 
 
 onMounted(async () => {
-    const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'c_informe_obs' };
+    const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'c_resolucion' };
     try {
-        const res = await concursoDocInterinos.obtenerColumna(dat);
+        const res = await designacionDocInterinos.obtenerColumna(dat);
         if (res.data != '') {
             uploadDone.value = true
             getDocumentUrl();
@@ -136,7 +137,7 @@ async function enviarTramite() {
 async function uploadDocument() {
     loading.value = true
     try {
-        const message = await handleUpload(docDrive.value, datosrecividos.nrotramite, 'c_informe_obs');
+        const message = await handleUpload(docDrive.value, datosrecividos.nrotramite, 'c_resolucion');
         alert(message);
         uploadDone.value = true;
         if (uploadDone.value) {
@@ -151,7 +152,7 @@ async function uploadDocument() {
 async function getDocumentUrl() {
     loading.value = true
     try {
-        urlDoc.value = await handleUrl(datosrecividos.nrotramite, 'c_informe_obs');
+        urlDoc.value = await handleUrl(datosrecividos.nrotramite, 'c_resolucion');
     } finally {
         loading.value = false
     }
@@ -161,7 +162,7 @@ async function getDocumentUrl() {
 async function downloadDocument() {
     loading.value = true
     try {
-        const message = await handleDownload(datosrecividos.nrotramite, 'c_informe_obs', 'informe_obs', datosrecividos.flujo, 'concurso_doc_interinos');
+        const message = await handleDownload(datosrecividos.nrotramite, 'c_resolucion', 'resolucion', datosrecividos.flujo, 'designacion_doc_interinos');
         alert(message);
     } finally {
         loading.value = false
@@ -186,7 +187,7 @@ function redirectDocument() {
 async function cargarDocumento(nombreDocumento) {
     try {
         const nt = datosrecividos.nrotramite;
-        const dat = { nombre: nombreDocumento, nrotramite: nt, tabla: 'concurso_doc_interinos', flujo: datosrecividos.flujo };
+        const dat = { nombre: nombreDocumento, nrotramite: nt, tabla: 'designacion_doc_interinos', flujo: datosrecividos.flujo };
         const response = await documentService.recuperarDocumentos(dat);
         const archivoBlob = new Blob([response.data], { type: response.headers['content-type'] });
         const archivoURL = URL.createObjectURL(archivoBlob);
