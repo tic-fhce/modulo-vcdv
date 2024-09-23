@@ -97,10 +97,17 @@ const getSeverity = (status) => {
     }
 }
 
-function VerFormulario(data) {
+async function VerFormulario(data) {
     const F = data.flujo
     const P = data.proceso
     const T = data.nrotramite
+
+    const env = { 'flujo': F, 'proceso': P, 'nroTramite': T }
+    try {
+        await seguimientoService.activarVisto(env);
+    } catch (error) {
+        console.error('Error al obtener los trámites pendientes:', error);
+    }
 
     store.dispatch('setData', data);
 
@@ -111,28 +118,4 @@ function VerFormulario(data) {
     router.replace('/'+F+'/'+P)
 
 }
-
-async function QuitarFormulario(data) {
-    const confirmed = confirm('¿Está seguro de quitarlo de su LISTA?');
-    if (confirmed) {
-        const env = {'flujo': data.flujo, 'proceso': data.proceso, 'nroTramite': data.nrotramite};
-        await seguimientoService.quitarTramiteLista(env);
-        await actualizarDatos();
-    }
-}
-
-async function actualizarDatos() {
-    loading.value = true; 
-    try {
-        const data = await TramiteConcluidoService.getData();
-        tramitependiente.value = data;
-    } catch (error) {
-        console.error('Error al obtener los tramites:', error);
-    } finally {
-        loading.value = false;
-    }
-}
-
-
-
 </script>

@@ -12,6 +12,7 @@ import nuevoflujo from '@/views/pages/nuevoflujo.vue'
 import panel from '@/views/admin/panel.vue'
 import tramite from '@/views/admin/tramite.vue'
 import seguimiento from '@/views/admin/seguimiento.vue'
+
 import designacionTribunal from '@/views/admin/designacion tribunal.vue'
 import perfilGrado from '@/views/admin/perfil grado.vue'
 
@@ -101,6 +102,10 @@ const router = createRouter({
         {
           path: 'hoja-ruta',
           component: () => import('@/views/pages/hojaRuta.vue') 
+        },
+        {
+          path: 'atencion',
+          component: () => import('@/views/pages/atencionHR.vue') 
         },
       ]
     },

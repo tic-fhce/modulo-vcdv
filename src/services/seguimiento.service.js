@@ -16,7 +16,16 @@ export default {
     listTramiteConcluido(){
         return Api().get("/api/seguimiento/tramiteConcluido");
     },
-    quitarTramiteLista(datos){
-        return Api().post("/api/seguimiento/quitarTramite", datos);
+    listHojaRutaAtendidas(){
+        return Api().get("/api/seguimiento/hojarutaAtendida");
+    },
+    countTramitesPendientes(){
+        return Api().get("/api/seguimiento/countTramitesPendientes");
+    },
+    countTramitesConcluidos(){
+        return Api().get("/api/seguimiento/countTramitesConcluidos");
+    },
+    activarVisto(datos){
+        return Api().post("/api/seguimiento/visto", datos);
     }
 }

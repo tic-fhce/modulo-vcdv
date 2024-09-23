@@ -9,6 +9,7 @@
                     <InputText v-model="filters['global'].value" placeholder="Buscar..." />
                 </div>
             </template>
+
             <template #empty> No se encontraron tramites. </template>
             <template #loading> Cargando tramites. Espere por favor. </template>
 
@@ -59,6 +60,7 @@ import { useStore } from 'vuex';
 import { FilterMatchMode } from 'primevue/api';
 import { TramitePendienteService } from './tramitependiente.js';
 import { useRouter } from 'vue-router';
+import seguimientoService from '@/services/seguimiento.service';
 
 const router = useRouter();
 const store = useStore();
@@ -74,11 +76,11 @@ const loading = ref(true);
 let interval;
 onMounted(() => {
     fetchTramites();
-    interval = setInterval(fetchTramites, 1000*60); 
+    interval = setInterval(fetchTramites, 1000 * 60);
 });
 
 onBeforeUnmount(() => {
-    clearInterval(interval); 
+    clearInterval(interval);
 });
 
 
@@ -108,10 +110,17 @@ const getSeverity = (status) => {
     }
 }
 
-function VerFormulario(data) {
+async function VerFormulario(data) {
     const F = data.flujo
     const P = data.proceso
     const T = data.nrotramite
+
+    const env = { 'flujo': F, 'proceso': P, 'nroTramite': T }
+    try {
+        await seguimientoService.activarVisto(env);
+    } catch (error) {
+        console.error('Error al obtener los trámites pendientes:', error);
+    }
 
     store.dispatch('setData', data);
 
