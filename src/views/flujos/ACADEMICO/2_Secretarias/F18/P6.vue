@@ -38,6 +38,8 @@
                 </div>
             </div>
         </div>
+
+        <Button @click="listarToken()">Listar</Button>
     </div>
 
     <!-- Modal de Carga -->
@@ -54,17 +56,18 @@
 </template>
 
 <script setup>
-import { useStore } from 'vuex';
-import { useRouter } from 'vue-router';
-import { ref, onMounted, watch } from 'vue';
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
-import AppDatos from './Components/Datos.vue';
-import ListaArchivos from './Components/ListaArchivos.vue'
-import workflowService from '@/services/workflow.service';
 import designacionTribunalService from '@/services/designacionTribunal.service';
-import DocumentTable from './Components/GenerarDocumentos.vue';
 import editDocumentService from '@/services/editDocument.service';
+import tokenService from '@/services/token.service';
+import workflowService from '@/services/workflow.service';
+import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useStore } from 'vuex';
+import AppDatos from './Components/Datos.vue';
+import DocumentTable from './Components/GenerarDocumentos.vue';
+import ListaArchivos from './Components/ListaArchivos.vue';
 
 const router = useRouter()
 const store = useStore()
@@ -140,6 +143,39 @@ async function generarHojaDeRuta(nroTramite) {
         redireccionar("/tramite-pendiente");
     } finally {
         loadingModal.value = false;
+    }
+}
+
+async function listarToken(){
+    try{
+        const {data} = await tokenService.ListarToken()
+        const pin = "12988790"
+        if(data.datos.connected){
+            const tokens = data.datos.tokens
+            const slots = []
+            const serials = []
+            const names = []
+            const models = []
+            for(let i = 0; i < tokens.length; i++){
+                slots.push(tokens[i].slot)
+                serials.push(tokens[i].serial)
+                names.push(tokens[i].name)
+                models.push(tokens[i].model)
+            }
+
+            const datos_cert = {"pin": pin, "slot": slots[0]}
+            const certificados = await tokenService.ListarCertificados(datos_cert)
+            const alias = certificados.data.datos.data_token.data[0].alias
+
+            console.log(alias)
+
+            /*console.log(slots)
+            console.log(serials)
+            console.log(names)
+            console.log(models)*/
+        }
+    } catch(error) {
+        alert('Servicio de Firma no disponible')
     }
 }
 </script>
