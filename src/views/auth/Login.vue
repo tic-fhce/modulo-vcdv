@@ -41,7 +41,7 @@ async function funIngresar() {
         localStorage.setItem("access_token", response.data.token)
         await getUsuario()
         if (rol.value === 'ADMINISTRADOR') {
-            router.push("/panel");
+            router.push("/adm/panel");
         } else {
             router.push("/inicio");
         }

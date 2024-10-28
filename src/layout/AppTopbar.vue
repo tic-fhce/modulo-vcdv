@@ -1,20 +1,19 @@
 <template>
     <div class="layout-topbar">
-        <router-link to="/" class="layout-topbar-logo">
-            <img src='/demo/images/login/logo-fhce.png' alt="logo" />
-            <span class="layout-topbar-menu">SGDF</span>
-        </router-link>
-
-        <div class="layout-topbar-menu" v-if="false" >
-            <button class="p-link layout-menu-button layout-topbar-button" @click="onMenuToggle()">
+        <div class="layout-topbar-logo">
+            <button v-if="rol=='ADMINISTRADOR'" class="layout-menu-button layout-topbar-button" @click="onMenuToggle()">
                 <i class="pi pi-bars"></i>
             </button>
+
+            <div class="layout-topbar-logo">
+                <img src='/demo/images/login/logo-fhce.png' alt="logo" />
+                <span class="layout-topbar-menu">SGDF</span>
+            </div>
         </div>
 
-        <div class="layout-topbar-menu">
+        <div class="layout-topbar-actions">
             <Menu ref="menu" :model="overlayMenuItems" :popup="true" />
-            <Button type="button" :label="rol" icon="pi pi-user" @click="toggleMenu"
-                style="font-size: 16px; width: auto; border: none; background-color: transparent; color: inherit;" />
+            <Button type="button" :label="rol" icon="pi pi-user" @click="toggleMenu" class="layout-topbar-user" />
         </div>
     </div>
 </template>

@@ -41,11 +41,9 @@
         align-items: center;
         position: relative;
         color: var(--text-color-secondary);
-        border-radius: 25%;
+        border-radius: 10%;
         border: 0;
         background-color: transparent;
-        width: 10rem;
-        height: 3rem;
         cursor: pointer;
         transition: background-color $transitionDuration;
 
@@ -54,12 +52,12 @@
             background-color: var(--surface-hover);
         }
 
-        &:focus {
+        &:focus-visible {
             @include focused();
         }
 
         i {
-            font-size: 1.5rem;
+            font-size: 1.6rem;
         }
 
         span {
@@ -69,7 +67,7 @@
     }
 
     .layout-menu-button {
-        margin-left: 2rem;
+        margin-left: 0rem;
     }
 
     .layout-topbar-menu-button {
@@ -87,8 +85,22 @@
         display: flex;
 
         .layout-topbar-button {
-            margin-left: 1rem;
+            margin-left: 0rem;
         }
+    }
+    .layout-topbar-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 1rem;
+    }
+
+    .layout-topbar-user {
+        font-size: 16px; 
+        width: auto; 
+        border: none; 
+        background-color: 
+        transparent; 
+        color: inherit;
     }
 }
 
@@ -99,19 +111,27 @@
 
         .layout-topbar-logo {
             width: auto;
-            order: 0;
-            
+
+            img {
+                height: 4rem;
+                margin-right: 1rem;
+            }
         }
 
         .layout-menu-button {
-            margin-left: 0;
-            order: 1;
+            margin-left: 1rem;
+            margin-right: 0.5rem;
         }
 
         .layout-topbar-menu-button {
             display: inline-flex;
             margin-left: 0;
             order: 3;
+        }
+
+        .layout-topbar-user {
+            font-size: 0.8rem; 
+            
         }
 
         .layout-topbar-menu {
@@ -136,7 +156,7 @@
             .layout-topbar-button {
                 margin-left: 0;
                 display: flex;
-                width: 100%;
+                width: 100%;    
                 height: auto;
                 justify-content: flex-start;
                 border-radius: 12px;

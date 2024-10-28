@@ -10,12 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "axios": "^1.6.7",
+    "axios": "^1.7.7",
     "chart.js": "3.3.2",
     "cors": "^2.8.5",
     "date-fns": "^3.6.0",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2",
+    "express": "^4.21.1",
     "frontend": "file:",
     "googleapis": "^137.1.0",
     "jspdf": "^2.5.1",
@@ -25,7 +25,7 @@
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^4.2.67",
     "primeflex": "^3.3.1",
-    "primeicons": "^6.0.1",
+    "primeicons": "^7.0.0",
     "primevue": "3.39.0",
     "vue": "^3.4.15",
     "vue-router": "^4.2.5",

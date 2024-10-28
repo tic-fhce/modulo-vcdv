@@ -9,13 +9,6 @@ import tablatramiteconcluido from '@/views/pages/tablatramiteconcluido.vue'
 import inicio from '@/views/pages/inicio.vue'
 import nuevoflujo from '@/views/pages/nuevoflujo.vue'
 
-import panel from '@/views/admin/panel.vue'
-import tramite from '@/views/admin/tramite.vue'
-import seguimiento from '@/views/admin/seguimiento.vue'
-
-import designacionTribunal from '@/views/admin/designacion tribunal.vue'
-import perfilGrado from '@/views/admin/perfil grado.vue'
-
 import firmar from '@/views/pages/firmar.vue'
 import Formulario from '@/views/Formulario.vue'
 
@@ -29,44 +22,6 @@ const router = createRouter({
       meta: {redirectIfAuth: true}
     },
     {
-      path: '/firmar',
-      name: 'firmar',
-      component: firmar,
-      props: route => ({ documento: route.params.documento }),
-    },
-    {
-      path: '/formulario',
-      name: 'formulario',
-      component: Formulario
-    },
-    {
-      path: '/',
-      component: AppLayout,
-      meta: {requireAuth: true},
-      children: [
-        {
-          path: 'panel',
-          component: panel
-        },
-        {
-          path: 'tramite',
-          component: tramite
-        },
-        {
-          path: 'seguimiento',
-          component: seguimiento
-        },
-        {
-          path: 'perfilGrado',
-          component: perfilGrado
-        },
-        {
-          path: 'designacionTribunal',
-          component: designacionTribunal
-        },
-      ]
-    },
-    {
       path: '/auth/access',
       name: 'Access',
       component: Access
@@ -75,6 +30,103 @@ const router = createRouter({
       path: '/auth/error',
       name: 'Error',
       component: Error
+    },
+    {
+      path: '/adm',
+      component: AppLayout,
+      meta: {requireAuth: true},
+      children: [
+        { 
+          path: 'panel',
+          name: 'admPanel', 
+          component: () => import('@/views/admin/panel.vue') 
+        },
+        { 
+          path: 'tramite', 
+          name: 'admTramite',
+          component: () => import('@/views/admin/tramite.vue') 
+        },
+        { 
+          path: 'seguimiento', 
+          name: 'admSeguimiento',
+          component: () => import('@/views/admin/seguimiento.vue') 
+        },
+        {
+          path: 'usuario',
+          name: 'admUsuario',
+          component: () => import('@/views/admin/usuario.vue')
+        },
+        {
+          path: 'flujo',
+          name: 'admFlujo',
+          component: () => import('@/views/admin/flujo.vue')
+        },
+        {
+          path: 'graduacion',
+          children: [
+            {
+              path: 'aprobacionPerfil',
+              name: 'admAprobacionPerfil',
+              component: () => import('@/views/admin/graduacion/aprobacionPerfil.vue')
+            },
+            {
+              path: 'designacionTribunal',
+              name: 'admDesignacionTribunal',
+              component: () => import('@/views/admin/graduacion/designacionTribunal.vue')
+            },
+            {
+              path: 'cambioModalidad',
+              name: 'admCambioModalidad',
+              component: () => import('@/views/admin/graduacion/cambioModalidad.vue')
+            },
+          ]
+        },
+        {
+          path: 'convalidacion',
+          children: [
+            {
+              path: 'carrera',
+              name: 'admCarrera',
+              component: () => import('@/views/admin/convalidacion/carrera.vue')
+            },
+            {
+              path: 'planPlan',
+              name: 'admPlanPlan',
+              component: () => import('@/views/admin/convalidacion/planPlan.vue')
+            },
+          ]
+        },
+        {
+          path: 'inscripcion',
+          children: [
+            {
+              path: 'alumnoLibre',
+              name: 'admAlumnoLibre',
+              component: () => import('@/views/admin/inscripcion/alumnoLibre.vue')
+            },
+            {
+              path: 'materiaExtra',
+              name: 'admMateriaExtra',
+              component: () => import('@/views/admin/inscripcion/materiaExtra.vue')
+            },
+          ]
+        },
+        {
+          path: 'certificado',
+          children: [
+            {
+              path: 'conclusionEstudios',
+              name: 'admConclusionEstudios',
+              component: () => import('@/views/admin/certificado/conclusionEstudios.vue')
+            },
+            {
+              path: 'unicoCalificacion',
+              name: 'admUnicoCalificacion',
+              component: () => import('@/views/admin/certificado/unicoCalificacion.vue')
+            },
+          ]
+        },
+      ]
     },
     {
       path: '/',
