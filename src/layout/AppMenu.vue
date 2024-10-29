@@ -25,7 +25,14 @@ const model = ref([
     {
         label: 'Administración',
         items: [
-            { label: 'Usuarios', icon: 'pi pi-users', to: '/adm/usuario' },
+            { 
+                label: 'Usuarios', 
+                icon: 'pi pi-users',
+                items: [
+                    { label: 'Lista', icon: 'pi pi-list', to:'/adm/usuario/lista' },
+                    { label: 'Busqueda', icon: 'pi pi-search', to: '/adm/usuario/busqueda' }
+                ] 
+            },
             { label: 'Flujo de Procesos', icon: 'pi pi-sitemap', to: '/adm/flujo' }
         ]
     },

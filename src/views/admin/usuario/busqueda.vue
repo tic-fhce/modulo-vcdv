@@ -12,7 +12,7 @@
           <label for="complemento">Complemento</label>
           <InputText id="complemento" v-model="searchCriteria.complemento" placeholder="Ingrese Complemento" />
         </div>
-        <div class="col-6 md:col-4 lg:col-6">
+        <div class="col-6 lg:col-6 md:col-2 ">
           <Button label="Buscar" icon="pi pi-search" @click="buscarUsuario" class="p-button-primary" />
         </div>
       </div>
@@ -62,13 +62,18 @@
             <InputText :value="usuarioEncontrado.unidadAcademica" disabled />
           </div>
         </div>
-        <div class="col-6 md:col-2 lg:col-3">
-          <Button label="Editar" icon="pi pi-pencil" @click="abrirModalEditar" class="p-button-success" />
+        <div class="flex flex-row gap-3 ">
+          <div class="col-6 md:col-2 lg:col-3">
+            <Button label="Editar" icon="pi pi-pencil" @click="abrirModalEditar" class="p-button-success" />
+          </div>
+          <div class="col-6 md:col-2 lg:col-3">
+            <Button label="Agregar" icon="pi pi-user-plus" @click="abrirModalEditar" class="p-button-warning" />
+          </div>
         </div>
       </div>
       <div class="card" v-else>
         <div style="display: flex; justify-content: center;">
-          <img src="/demo/images/login/user-logo.png" alt="logo" width="80%"/>
+          <img src="/demo/images/login/user-logo.png" alt="logo" width="80%" />
         </div>
       </div>
     </div>
@@ -92,7 +97,7 @@
           </div>
         </div>
         <div class="field col-12" v-else>
-          <label>Rol</label>
+          <label>Agregar Rol</label>
           <div class="p-inputgroup">
             <Dropdown v-model="usuarioEditable.rolSeleccionado" :options="rolesDisponibles2" optionLabel="label"
               optionValue="value" placeholder="Seleccione un Rol" />
@@ -135,20 +140,20 @@ const searchCriteria = ref({
 });
 
 // Datos del usuario encontrado
-const usuarioEncontrado = ref(null
-  // {
-  //   id: 1,
-  //   nombres: 'Juan',
-  //   apellidos: 'Pérez',
-  //   ci: '1234567',
-  //   complemento: 'LP',
-  //   cif: 'AB123',
-  //   sexo: 'Masculino',
-  //   celular: '78912345',
-  //   correo: 'juan.perez@example.com',
-  //   rol: ['ESTUDIANTE'],
-  //   unidadAcademica: 'Ingeniería de Sistemas',
-  // }
+const usuarioEncontrado = ref(
+  {
+    id: 1,
+    nombres: 'Juan',
+    apellidos: 'Pérez',
+    ci: '1234567',
+    complemento: 'LP',
+    cif: 'AB123',
+    sexo: 'Masculino',
+    celular: '78912345',
+    correo: 'juan.perez@example.com',
+    rol: ['ESTUDIANTE'],
+    unidadAcademica: 'Ingeniería de Sistemas',
+  }
 );
 
 // Modal de edición

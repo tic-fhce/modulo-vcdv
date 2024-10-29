@@ -93,7 +93,7 @@ async function sendSelectedValue() {
 async function ListaFlujosP1() {
   try {
     const flujos = await flujoService.ListarInicioFlujo();
-    //console.log(flujos)
+    console.log(flujos)
     const opcionesFlujo = [];
     for (const flujo of flujos.data) {
       opcionesFlujo.push({ flujo: flujo.flujo, formulario: flujo.formulario });

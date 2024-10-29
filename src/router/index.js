@@ -53,8 +53,19 @@ const router = createRouter({
         },
         {
           path: 'usuario',
-          name: 'admUsuario',
-          component: () => import('@/views/admin/usuario.vue')
+          children: [
+            {
+              path: 'lista',
+              name: 'admLista',
+              component: () => import('@/views/admin/usuario/lista.vue')    
+            },
+            {
+              path: 'busqueda',
+              name: 'admBusqueda',
+              component: () => import('@/views/admin/usuario/busqueda.vue')    
+            }
+          ]
+          
         },
         {
           path: 'flujo',

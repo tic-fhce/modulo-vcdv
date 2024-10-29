@@ -2,9 +2,15 @@ import { Api } from "./api.service"
 
 export default {
     ListarInicioFlujo(){
-        return Api().get("/api/flujo");
+        return Api().get("/flujo/listP1");
     },
-    CrearCursoPreuniversitario(formData){
-        return Api().post("/api/flujo/upload", formData)
+    ListarFlujos(){
+        return Api().get("/flujo/list")
+    },
+    ActualizarHabilitado(datos){
+        return Api().put("/flujo/actualizar-habilitado", datos)
+    },
+    ActualizarProcedimiento(datos){
+        return Api().put("/flujo/actualizar-procedimiento", datos)
     }
 }

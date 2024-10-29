@@ -2,9 +2,12 @@ import { Api } from "./api.service"
 
 export default {
     actulizarColumna(datos){
-        return Api().post("/api/aprobacionPerfil/actualizar", datos)
+        return Api().patch("/aprobacionPerfil/actualizar", datos)
     },
     obtenerColumna(datos){
-        return Api().post("/api/aprobacionPerfil/obtener", datos)
+        return Api().post("/aprobacionPerfil/obtener", datos)
+    },
+    listar(){
+        return Api().get("/aprobacionPerfil/listar")
     }
 }
