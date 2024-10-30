@@ -243,6 +243,8 @@ async function enviarTramite() {
 
                             const col3 = { colum: 'n_modalidad', param: x, nrotramite: a };
                             const col4 = { colum: 'n_titulo', param: y, nrotramite: a };
+                            console.log(col3)
+                            console.log(col4)
                             await cambioModalidadService.actulizarColumna(col3);
                             await cambioModalidadService.actulizarColumna(col4);
 

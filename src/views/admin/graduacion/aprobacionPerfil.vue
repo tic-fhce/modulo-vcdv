@@ -2,16 +2,18 @@
     <div class="card">
         <h4 style="color: blue; text-align: center;">APROBACIONES DE PERFIL DE GRADO</h4><br><br>
 
-        <!-- Formulario de Filtros -->
         <div class="flex justify-content-center mb-4 gap-3">
-            <Dropdown v-model="selectedCarrera" :options="carreras" optionLabel="label" optionValue="value" placeholder="Seleccionar Carrera" />
-            <Dropdown v-model="selectedYear" :options="years" optionLabel="label" optionValue="value" placeholder="Seleccionar Año" />
+            <Dropdown v-model="selectedCarrera" :options="carreras" optionLabel="label" optionValue="value"
+                placeholder="Seleccionar Carrera" />
+            <Dropdown v-model="selectedYear" :options="years" optionLabel="label" optionValue="value"
+                placeholder="Seleccionar Año" />
             <Button label="Listar" icon="pi pi-search" @click="listarTramites" />
+            <Button label="Generar Reporte" icon="pi pi-file-pdf" class="p-button-warning" @click="generatePDF" :disabled="!Lista.length" />
         </div>
 
-        <!-- Tabla de Trámites -->
-        <DataTable v-model:filters="filters" :value="filteredTramites" paginator :rows="10" dataKey="id" filterDisplay="row"
-            :loading="loading" :globalFilterFields="['nrotramite', 'estado', 'nombres', 'apellidos', 'ci']">
+        <DataTable v-model:filters="filters" :value="Lista" paginator :rows="10" dataKey="id" filterDisplay="row"
+            :loading="loading"
+            :globalFilterFields="['tramite.id', 'tramite.estado', 'fechaFormateada', 'modalidad', 'titulo', 'tutor', 'nombres', 'apellidos', 'ci']">
             <template #header>
                 <div class="flex justify-content-end">
                     <InputText v-model="filters['global'].value" placeholder="Buscar..." />
@@ -20,58 +22,49 @@
             <template #empty> No se encontraron trámites. </template>
             <template #loading> Cargando trámites. Espere por favor. </template>
 
-            <!-- Columnas de la Tabla de Trámites -->
-            <Column field="nrotramite" header="Nro. Trámite" :sortable="true" style="max-width:10%">
+            <Column field="tramite.id" header="Nro. Trámite" :sortable="true" style="max-width:10%"></Column>
+            <Column field="tramite.estado" header="Estado" :sortable="true" style="min-width:10%">
                 <template #body="{ data }">
-                    {{ data.tramite.id }}
+                    <Tag :value="data.tramite.estado" :severity="getSeverity(data.tramite.estado)" />
                 </template>
             </Column>
-            <Column field="estado" header="Estado" :sortable="true" style="min-width:10%">
-                <template #body="{ data }">
-                    {{ data.estado }}
-                </template>
-            </Column>
-            <Column field="nombres" header="Nombres" :sortable="true" style="min-width:10%">
-                <template #body="{ data }">
-                    {{ data.nombres }}
-                </template>
-            </Column>
-            <Column field="apellidos" header="Apellidos" :sortable="true" style="min-width:10%">
-                <template #body="{ data }">
-                    {{ data.apellidos }}
-                </template>
-            </Column>
-            <Column field="ci" header="CI" :sortable="true" style="min-width:10%">
-                <template #body="{ data }">
-                    {{ data.ci }}
-                </template>
-            </Column>
-            <Column field="documentos" header="Documentos" style="min-width:10%">
+            <Column field="fechaFormateada" header="Fecha Creación" :sortable="true" style="min-width:10%"></Column>
+            <Column field="modalidad" header="Modalidad" :sortable="true" style="min-width:10%"></Column>
+            <Column field="titulo" header="Titulo" :sortable="true" style="min-width:10%"></Column>
+            <Column field="tutor" header="Tutor" :sortable="true" style="min-width:10%"></Column>
+            <Column field="nombres" header="Nombres" :sortable="true" style="min-width:10%"></Column>
+            <Column field="apellidos" header="Apellidos" :sortable="true" style="min-width:10%"></Column>
+            <Column field="ci" header="CI" :sortable="true" style="min-width:10%"></Column>
+            <Column header="Documentos" style="min-width:10%">
                 <template #body="{ data }">
                     <div class="flex justify-content-left flex-wrap gap-3">
-                        <Button @click="abrirModal(data)" label="Ver" severity="info" raised><i class="pi pi-eye"></i></Button>
+                        <Button @click="abrirModal(data)" label="Ver" severity="info" raised>
+                            <i class="pi pi-eye"></i>
+                        </Button>
                     </div>
                 </template>
             </Column>
         </DataTable>
 
-        <!-- Modal para Mostrar Documentos -->
         <Dialog v-model:visible="visible" header="Documentos del Trámite" :style="{ width: '80%' }">
             <DataTable :value="documentosTramite" dataKey="nombre">
                 <Column field="nombre" header="Nombre del Documento" />
-                <Column field="ver" header="Ver Documento">
+                <Column header="Ver Documento">
                     <template #body="{ data }">
-                        <Button icon="pi pi-eye" label="Ver" @click="verDocumento(data)" />
+                        <a href="" @click.prevent="verDocumento(data)">
+                            <i class="pi pi-link"> Ver Documento</i>
+                        </a>
                     </template>
                 </Column>
-                <Column field="observaciones" header="Observaciones">
+                <Column header="Observaciones">
                     <template #body="{ data }">
-                        <InputText v-model="data.observaciones" placeholder="Observaciones" />
+                        {{ data.observaciones }}
                     </template>
                 </Column>
-                <Column field="validarFirma" header="Validar Firma">
+                <Column header="Validar Firma">
                     <template #body="{ data }">
-                        <Button v-if="documentoRequiereFirma(data.nombre)" icon="pi pi-check" label="Validar Firma" @click="validarFirma(data)" />
+                        <Button v-if="documentoRequiereFirma(data.nombre)" icon="pi pi-check" label="Validar Firma"
+                            @click="validarFirma(data)" />
                     </template>
                 </Column>
             </DataTable>
@@ -83,103 +76,239 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref } from 'vue';
 import { useStore } from 'vuex';
 import { FilterMatchMode } from 'primevue/api';
-import { aprobacionPerfiles } from '../js/aprobacionPerfil';
 import { useRouter } from 'vue-router';
+import { aprobacionPerfiles } from '../js/aprobacionPerfil';
+import documentService from '@/services/document.service';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import logoImage from '/demo/images/login/logo-fhce.png';
 
 const router = useRouter();
 const store = useStore();
 
 const visible = ref(false);
-const Lista = ref([])
+const Lista = ref([]);
 
 const filters = ref({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
 });
-const loading = ref(true);
+const loading = ref(false);
 const selectedCarrera = ref(null);
 const selectedYear = ref(null);
 const documentosTramite = ref([]);
 
-// Opciones de años para el filtro
 const years = Array.from({ length: 10 }, (_, i) => {
     const year = new Date().getFullYear() - i;
     return { label: year.toString(), value: year };
 });
 
-// Definición de carreras (ejemplo)
 const carreras = [
-    { value: 'c1', label: 'C. Educación' },
-    { value: 'c2', label: 'C. Información' },
-    { value: 'c3', label: 'Cine' },
-    { value: 'c4', label: 'Filosofica' },
-    { value: 'c5', label: 'Historia' },
-    { value: 'c6', label: 'Linguistica' },
-    { value: 'c7', label: 'Literatura' },
-    { value: 'c8', label: 'Psicologia' },
-    { value: 'c9', label: 'Turismo' },
+    { value: 'CE', label: 'C. Educación' },
+    { value: 'CI', label: 'C. Información' },
+    { value: 'CN', label: 'Cine' },
+    { value: 'FIL', label: 'Filosofía' },
+    { value: 'HIS', label: 'Historia' },
+    { value: 'LIN', label: 'Lingüística' },
+    { value: 'LIT', label: 'Literatura' },
+    { value: 'PSI', label: 'Psicología' },
+    { value: 'TUR', label: 'Turismo' },
 ];
 
-// Filtrar lista por carrera y año
-const filteredTramites = computed(() => {
-    if (!selectedCarrera.value || !selectedYear.value) return []; // Devuelve vacío si no se selecciona carrera o año
-    return Lista.value.filter(item => {
-        const matchCarrera = item.tramite.flujo === selectedCarrera.value;
-        const matchYear = new Date(item.fecha).getFullYear() === selectedYear.value;
-        return matchCarrera && matchYear;
-    });
-});
-
-// Cargar datos iniciales
-onMounted(async () => {
-    try {
-        const data = await aprobacionPerfiles.getData();
-        console.log(data)
-        Lista.value = data;
-        loading.value = false;
-    } catch (error) {
-        console.error('Error al obtener los trámites:', error);
+const getSeverity = (status) => {
+    switch (status) {
+        case 'true':
+            return 'danger';
+        case 'terminado':
+            return 'success';
+        case 'pendiente':
+            return 'warning';
+        case 'fuera de plazo':
+            return 'danger';
+        default:
+            return null;
     }
-});
+};
 
-// Función para listar trámites basados en filtros seleccionados
 function listarTramites() {
+    if (!selectedCarrera.value || !selectedYear.value) {
+        alert('Por favor, seleccione una carrera y un año.');
+        return;
+    }
+    loading.value = true;
 
+    aprobacionPerfiles
+        .getData(selectedCarrera.value, selectedYear.value)
+        .then((data) => {
+            Lista.value = data.map((item) => ({
+                ...item,
+                fechaFormateada: formatFecha(item.tramite.creacion),
+            }));
+            loading.value = false;
+        })
+        .catch((error) => {
+            console.error('Error al obtener los trámites:', error);
+            loading.value = false;
+        });
 }
 
-// Abrir modal de documentos
 function abrirModal(data) {
     visible.value = true;
-    documentosTramite.value = [
-        { nombre: 'carta_institucion', observaciones: '', documento: data.d_carta_institucion },
-        { nombre: 'conclusion_estudios', observaciones: '', documento: data.d_conclusion_estudios },
-        { nombre: 'nota_director', observaciones: '', documento: data.d_nota_director },
-        { nombre: 'nota_tutor', observaciones: '', documento: data.d_nota_tutor },
-        { nombre: 'perfil_grado', observaciones: '', documento: data.d_perfil_grado },
-        // Agregar otros documentos según el objeto de datos recibido
-    ];
+    const documentos = [];
+    const observaciones = {};
+
+    for (const key in data) {
+        if (key.startsWith('d_') && data[key]) {
+            const nombreDocumento = key.substring(2);
+            documentos.push({
+                nombre: nombreDocumento,
+                observaciones: '',
+                documento: nombreDocumento,
+                nrotramite: data.tramite.id,
+                flujo: data.tramite.flujo,
+            });
+        } else if (key.startsWith('r_') && data[key]) {
+            const nombreDocumento = key.substring(2);
+            observaciones[nombreDocumento] = data[key];
+        }
+    }
+
+    documentos.forEach((doc) => {
+        doc.observaciones = observaciones[doc.nombre] || '';
+    });
+
+    documentosTramite.value = documentos;
 }
 
-// Ver documento (implementación de ejemplo)
-function verDocumento(data) {
-    console.log('Abriendo documento:', data.documento);
+async function verDocumento(data) {
+    const archivoURL = await cargarArchivo(data);
+    window.open(archivoURL, '_blank');
 }
 
-// Validar firma (implementación de ejemplo)
+async function cargarArchivo(data) {
+    const dat = {
+        nombre: data.documento,
+        nrotramite: data.nrotramite,
+        tabla: 'aprobacion_perfil',
+        flujo: data.flujo,
+    };
+    const response = await documentService.recuperarDocumentos(dat);
+    const archivoBlob = new Blob([response.data], { type: response.headers['content-type'] });
+    const archivoURL = URL.createObjectURL(archivoBlob);
+    return archivoURL;
+}
+
 function validarFirma(data) {
-    console.log('Validando firma para:', data.nombre);
+    alert('Validando firma para: ' + data.nombre);
 }
 
-// Determinar si un documento requiere firma
 function documentoRequiereFirma(nombre) {
-    const documentosConFirma = ['carta_institucion', 'nota_director'];
+    const documentosConFirma = [
+        'proyecto_resolucion_perfil',
+        'resolucion_perfil',
+        'solicitud_aprobacion_perfil',
+    ];
     return documentosConFirma.includes(nombre);
 }
 
-// Cerrar modal
 function cerrarModal() {
     visible.value = false;
+}
+
+function formatFecha(creacion) {
+    if (!creacion || creacion.length < 3) return '';
+
+    const [year, month, day, hour = 0, minute = 0, second = 0] = creacion;
+    const fecha = new Date(year, month - 1, day, hour, minute, second);
+
+    return (
+        fecha.toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' }) +
+        ' ' +
+        fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    );
+}
+
+// Helper function to get the label of the selected career
+function getCarreraLabel(value) {
+    const carrera = carreras.find((c) => c.value === value);
+    return carrera ? carrera.label : '';
+}
+
+function generatePDF() {
+    const doc = new jsPDF('landscape');
+
+    // Add Logo to the Upper Right Corner
+    const imgWidth = 25; // Adjust as needed
+    const imgHeight = 15; // Adjust as needed
+
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const x = pageWidth - imgWidth - 10;
+    const y = 10;
+
+    // Add the logo image
+    doc.addImage(logoImage, 'PNG', x, y, imgWidth, imgHeight);
+
+    // Add Title below the logo
+    doc.setFontSize(12);
+    doc.text('Reporte de Aprobaciones de Perfil de Grado', 12, y + imgHeight + 10);
+
+    // Add Career and Year
+    doc.setFontSize(10);
+    doc.text(`Carrera: ${getCarreraLabel(selectedCarrera.value)}`, 12, y + imgHeight + 20);
+    doc.text(`Gestión: ${selectedYear.value}`, 12, y + imgHeight + 26);
+
+    // Prepare Table Data
+    const tableColumn = [
+        'Nro. Trámite',
+        'Estado',
+        'Fecha Creación',
+        'Modalidad',
+        'Título',
+        'Tutor',
+        'Nombres',
+        'Apellidos',
+        'CI',
+    ];
+    const tableRows = [];
+
+    Lista.value.forEach((item) => {
+        const rowData = [
+            item.tramite.id,
+            item.tramite.estado,
+            item.fechaFormateada,
+            item.modalidad,
+            item.titulo,
+            item.tutor,
+            item.nombres,
+            item.apellidos,
+            item.ci,
+        ];
+        tableRows.push(rowData);
+    });
+
+    // Add Table to PDF
+    autoTable(doc, {
+        startY: y + imgHeight + 36,
+        head: [tableColumn],
+        body: tableRows,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 128, 185] },
+        columnStyles: {
+            0: { cellWidth: 20 }, // Nro. Trámite
+            1: { cellWidth: 25 }, // Estado
+            2: { cellWidth: 30 }, // Fecha Creación
+            3: { cellWidth: 25 }, // Modalidad
+            4: { cellWidth: 40 }, // Título
+            5: { cellWidth: 35 }, // Tutor
+            6: { cellWidth: 30 }, // Nombres
+            7: { cellWidth: 30 }, // Apellidos
+            8: { cellWidth: 25 }, // CI
+        },
+    });
+
+    // Save the PDF
+    doc.save('reporte_aprobaciones_perfil.pdf');
 }
 </script>

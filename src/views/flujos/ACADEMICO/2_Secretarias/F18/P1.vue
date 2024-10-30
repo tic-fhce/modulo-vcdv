@@ -124,6 +124,7 @@ const documentos = computed(() => {
 onMounted(async () => {
     try {
         const { data } = await designacionTribunalService.obtenerPerfilGrado();
+        console.log(data)
         modalidadSeleccionada.value = data[0].modalidad;
         titulo.value = data[0].titulo;
         perfilId.value = data[0].id;

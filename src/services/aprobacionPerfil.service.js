@@ -9,5 +9,8 @@ export default {
     },
     listar(){
         return Api().get("/aprobacionPerfil/listar")
+    },
+    listarCarreraYear(datos){
+        return Api().post("/aprobacionPerfil/listar-carrera-year", datos)
     }
 }

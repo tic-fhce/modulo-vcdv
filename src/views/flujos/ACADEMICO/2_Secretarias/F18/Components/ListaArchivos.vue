@@ -110,7 +110,7 @@ const documentosTabla = computed(() => {
 
 async function cargarArchivo(nombreDocumento) {
   const nt = datosrecividos.nrotramite;
-  const dat = { nombre: nombreDocumento, nrotramite: nt, tabla: props.tabla, flujo: datosrecividos.flujo };
+  const dat = { 'nombre': nombreDocumento, 'nrotramite': nt, 'tabla': props.tabla, 'flujo': datosrecividos.flujo };
   const response = await documentService.recuperarDocumentos(dat);
   const archivoBlob = new Blob([response.data], { type: response.headers['content-type'] });
   const archivoURL = URL.createObjectURL(archivoBlob);
