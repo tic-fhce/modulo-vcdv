@@ -100,13 +100,11 @@ const getSeverity = (status) => {
 async function VerFormulario(data) {
     const F = data.flujo
     const P = data.proceso
-    const T = data.nrotramite
 
-    const env = { 'flujo': F, 'proceso': P, 'nroTramite': T }
     try {
-        await seguimientoService.activarVisto(env);
+        await seguimientoService.activarVisto({'id': data.id});
     } catch (error) {
-        console.error('Error al obtener los trámites pendientes:', error);
+        console.error('Error al actualizar:', error);
     }
 
     store.dispatch('setData', data);

@@ -8,24 +8,24 @@ export default {
         return Api().post("/api/tramite/listarSeguimientoTramite")
     },
     listar(){
-        return Api().get("/api/seguimiento/listar");
+        return Api().get("/seguimiento/listar");
     },
     listTramitePendiente(){
-        return Api().get("/api/seguimiento/tramitePendiente");
+        return Api().get("/seguimiento/tramitePendiente");
     },
     listTramiteConcluido(){
-        return Api().get("/api/seguimiento/tramiteConcluido");
+        return Api().get("/seguimiento/tramiteConcluido");
     },
     listHojaRutaAtendidas(){
-        return Api().get("/api/seguimiento/hojarutaAtendida");
+        return Api().get("/seguimiento/hojarutaAtendida");
     },
     countTramitesPendientes(){
-        return Api().get("/api/seguimiento/countTramitesPendientes");
+        return Api().get("/seguimiento/countTramitesPendientes");
     },
     countTramitesConcluidos(){
-        return Api().get("/api/seguimiento/countTramitesConcluidos");
+        return Api().get("/seguimiento/countTramitesConcluidos");
     },
     activarVisto(datos){
-        return Api().post("/api/seguimiento/visto", datos);
+        return Api().post("/seguimiento/visto", datos);
     }
 }

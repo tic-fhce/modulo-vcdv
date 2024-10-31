@@ -55,10 +55,9 @@ async function sendSelectedValue() {
       const { data } = await workflowService.inicioFlujo(datos);
       if (data) {
         const l = data[0];
-        const x = l.creacion;
-        const fechaInicio = (x[2]) + "/" + (x[1]) + "/" + (x[0]) + "  " + (x[3]) + ":" + (x[4]);
-        const fecha = (x[2]) + "/" + (x[1]) + "/" + (x[0]);
-        const hora = (x[3]) + ":" + (x[4]) + ":" + (x[5]);
+        const x = l.creacion.split(" ");
+        const fecha = x[0];
+        const hora = x[1];
 
         const datosFormateados = {
           nrotramite: l.id,
@@ -93,7 +92,6 @@ async function sendSelectedValue() {
 async function ListaFlujosP1() {
   try {
     const flujos = await flujoService.ListarInicioFlujo();
-    console.log(flujos)
     const opcionesFlujo = [];
     for (const flujo of flujos.data) {
       opcionesFlujo.push({ flujo: flujo.flujo, formulario: flujo.formulario });
