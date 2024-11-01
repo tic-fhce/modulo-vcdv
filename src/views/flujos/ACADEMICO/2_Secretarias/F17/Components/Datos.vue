@@ -25,9 +25,7 @@
 </template>
 
 <script setup>
-import { useStore } from 'vuex';
-import { useRouter } from 'vue-router';
-import { ref, onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 
 const nombre = ref();
 const ci = ref();
@@ -36,8 +34,8 @@ const active = ref(false);
 const titulo = ref()
 
 const props = defineProps({
-  active: Boolean,
-  titulo: String,
+    active: Boolean,
+    titulo: String,
 });
 
 onMounted(() => {

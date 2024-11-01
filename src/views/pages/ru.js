@@ -4,7 +4,6 @@ export const Listar = {
     async getData() {
         try {
             const {data} = await seguimientoService.listarSeguimientoTramite()
-            console.log(data)
             // Procesar los datos recibidos y transformarlos al formato deseado
             const datosFormateados = data.map(l => {
                 const x = l.creacion
