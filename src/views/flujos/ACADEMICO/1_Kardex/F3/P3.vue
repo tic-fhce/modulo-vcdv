@@ -1,4 +1,6 @@
 <template>
+    <Toast />
+    <ConfirmDialog />
     <AppTopbar></AppTopbar>
     <br>
     <div class="layout-main-container">
@@ -25,6 +27,15 @@
             <!-- {{ datosrecividos }} -->
         </div>
     </div>
+    <!-- Modal de Carga -->
+    <Dialog v-model:visible="loadingModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
+        header="Cargando datos">
+        <div class="flex align-items-center justify-content-center">
+            <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
+                animationDuration=".5s" />
+            <span class="ml-3">Enviando, espere porfavor...</span>
+        </div>
+    </Dialog>
     <AppFooter></AppFooter>
 </template>
 
@@ -34,11 +45,18 @@ import { useRouter } from 'vue-router';
 import { createApp, ref, computed, onMounted } from 'vue';
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
 import AppDatos from './Components/Datos.vue'
 import ListaArchivos from './Components/ListaArchivos.vue'
 import workflowService from '@/services/workflow.service';
 import documentService from '@/services/document.service';
+import editDocumentService from '@/services/editDocument.service';
 
+const confirm = useConfirm();
+const toast = useToast();
+
+const loadingModal = ref(false);
 const router = useRouter()
 const store = useStore()
 const datosrecividos = store.getters.getData
@@ -52,65 +70,93 @@ const nomArchivos = ["1. Nota dirigida al Director", "2. Cedula de Identidad", "
 
 async function enviarTramite() {
     if (valRef.value.validarRadioButtons()) {
-        const confirmed = confirm('¿Esta seguro de enviar estos datos?');
-        if (confirmed) {
-            const result = await valRef.value.todosDocumentosCorrectos();
-            let cond;
-            if (result) {
-                cond = "si"
-            }
-            else {
-                com.value = "observado"
-                cond = "no"
-            }
-            const tb = valRef.value.tabla;
-            const nt = datosrecividos.nrotramite;
-            const enviarSolicitud = async (index) => {
-                if (index < tb.length) {
-                    const e = tb[index];
-                    const corr = e.correcto.value;
-                    const err = e.errores.value;
-                    let obs;
-
-                    if (corr === 'correcto') {
-                        obs = corr;
-                    } else {
-                        obs = err;
+        confirm.require({
+            message: 'Está seguro de enviar estos datos',
+            header: 'Confirmación',
+            icon: 'pi pi-question-circle',
+            accept: async () => {
+                try {
+                    const result = await valRef.value.todosDocumentosCorrectos();
+                    let cond;
+                    if (result) {
+                        cond = "si"
                     }
-
-                    const dat = { columna: valueArchivos[index], observacion: obs, nrotramite: nt, tabla: 'convalidacion_01' };
-                    await documentService.actualizarobservacionDocumentos(dat);
-
-                    await enviarSolicitud(index + 1);
-                } else {
-                    const b = datosrecividos.flujo
-                    const c = datosrecividos.proceso
-                    try {
-                        const env = { 'flujo': b, 'proceso': c, 'tramiteId': nt, 'comentario': com.value, 'condicion': cond }
-                        await workflowService.siguienteproceso(env)
-                    } catch (error) {
-                        alert(error);
+                    else {
+                        com.value = "observado"
+                        cond = "no"
                     }
+                    const tb = valRef.value.tabla;
+                    const nt = datosrecividos.nrotramite;
+                    const enviarSolicitud = async (index) => {
+                        if (index < tb.length) {
+                            const e = tb[index];
+                            const corr = e.correcto.value;
+                            const err = e.errores.value;
+                            let obs;
 
-                    if(result){
-                        cambiarData()
-                        window.location.replace("/F3/P4")
-                    } else {
-                        redireccionar("/tramite-concluido")
-                    }
-                    
-                    
+                            if (corr === 'correcto') {
+                                obs = corr;
+                            } else {
+                                obs = err;
+                            }
+
+                            const dat = { columna: valueArchivos[index], observacion: obs, nrotramite: nt, tabla: 'convalidacion_01' };
+                            await documentService.actualizarobservacionDocumentos(dat);
+
+                            await enviarSolicitud(index + 1);
+                        } else {
+                            const b = datosrecividos.flujo
+                            const c = datosrecividos.proceso
+                            try {
+                                const env = { 'flujo': b, 'proceso': c, 'tramiteId': nt, 'comentario': com.value, 'condicion': cond }
+                                const response = await workflowService.siguienteproceso(env);
+                                if (response) {
+                                    await generarHojaDeRuta();
+                                }
+                            } catch (error) {
+                                toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
+                            }
+
+                            if (result) {
+                                cambiarData()
+                                window.location.replace("/F3/P4")
+                            } else {
+                                redireccionar("/tramite-pendiente")
+                            }
+
+
+                        }
+                    };
+                    await enviarSolicitud(0);
+                } catch (error) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Complete los campos requeridos.', life: 3000 });
                 }
-            };
-            await enviarSolicitud(0);
-        } else {
-            // El usuario canceló
-        }
+            }
+        });
     }
 }
 
 function redireccionar(url) {
     router.replace(url)
+}
+
+async function generarHojaDeRuta() {
+    const nt = datosrecividos.nrotramite;
+    const r = datosrecividos.rol;
+    const f = datosrecividos.formulario;
+    const obs = com.value;
+    const datosFormateados = { nrotramite: nt, rol: r, ref: f, obs: '  - ' + obs };
+
+    loadingModal.value = true;
+    try {
+        await editDocumentService.editarDocumento(datosFormateados);
+        redireccionar("/hoja-ruta");
+    } catch (error) {
+        alert('Error al generar la hoja de ruta', error);
+        redireccionar("/tramite-pendiente");
+    } finally {
+        loadingModal.value = false;
+    }
 }
 
 function cambiarData() {

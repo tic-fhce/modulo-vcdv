@@ -29,7 +29,7 @@
             <Column field="editar" header="Editar" style="min-width:12.5%">
                 <template #body="{ data }">
                     <div class="flex justify-content-left flex-wrap gap-3">
-                        <Button @click="abrirModal(data.flujo)" label="Editar" severity="info" raised>
+                        <Button @click="abrirModal(data)" label="Editar" severity="info" raised>
                             <i class="pi pi-pen-to-square"> Editar</i>
                         </Button>
                     </div>
@@ -148,15 +148,21 @@ const roles = ref([
     { label: 'Estudiante', value: 7 },
     { label: 'Comision Convalidacion', value: 10 },
     { label: 'Consejo Carrera', value: 11 },
+    { label: 'Comisión Evaluación Docente', value: 16 },
+    { label: 'Comisión Evaluación Estudiante', value: 17 },
+    
+    { label: 'Vicerrectorado', value: 13 },
+    { label: 'Peronal Docente', value: 14 },
+    { label: 'Bienestar Social', value: 15 },
 ]);
 
 onMounted(async () => {
     cargarFlujos();
 });
 
-function abrirModal(flujo) {
-    flujoSeleccionado.value = flujo;
-    procesosFlujoSeleccionado.value = Lista.value.filter(item => item.flujo === flujo);
+function abrirModal(data) {
+    flujoSeleccionado.value = data.formulario;
+    procesosFlujoSeleccionado.value = Lista.value.filter(item => item.flujo === data.flujo);
     isModalVisible.value = true;
 }
 

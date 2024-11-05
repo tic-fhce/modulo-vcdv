@@ -1,7 +1,223 @@
 <template>
+    <Toast />
+    <ConfirmDialog />
+    <AppTopbar></AppTopbar>
+    <br>
+    <div class="layout-main-container">
+        <div class="col-12 mb-2 lg:col-11 lg:mb-0">
+            <div class="card">
 
+                <AppDatos :active="true" :titulo="'DESIGNACIÓN DE TRIBUNAL REVISOR DE GRADO'"></AppDatos>
+
+                <div class="card">
+                    <h5 style="text-decoration: underline;">DATOS DEL PERFIL DE GRADO</h5><br>
+                    <div class="mt-3 space-y-2">
+                        <div class="field">
+                            <span class="mr-1" style="font-weight: bold;">Modalidad de Graduacion:</span>
+                            <span style="color: blue; font-weight: bold;">{{ modalidad }}</span>
+                        </div>
+                        <div class="field">
+                            <span class="mr-1" style="font-weight: bold;">Titulo del Trabajo de Grado:</span>
+                            <span style="color: blue; font-weight: bold;">{{ titulo }}</span>
+                        </div>
+                        <div class="field">
+                            <span class="mr-1" style="font-weight: bold;">Tutor del Trabajo de Grado:</span>
+                            <span style="color: blue; font-weight: bold;">{{ tutor }}</span>
+                        </div>
+                    </div><br>
+                </div>
+
+                <ListaArchivos :key="listaArchivosKey" ref="valRef" :valueArchivos="valueArchivos"
+                    :nomArchivos="nomArchivos" :mostrarObservacionesProp="true" :mostrarRevision="true"
+                    :tabla="'designacion_tribunal'" :nomDivision="'DOCUMENTOS DEL ESTUDIANTE'" />
+                <br><br>
+                <div>
+                    <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
+                        <Button @click="redireccionar('/tramite-concluido')" severity="warning">
+                            <i class="pi pi-arrow-left">&nbsp;Regresar</i>
+                        </Button>
+                    </div>
+                    <div v-else class="flex justify-content-left flex-wrap gap-3">
+                        <Button @click="redireccionar('/tramite-pendiente')" severity="warning">
+                            <i class="pi pi-arrow-left">&nbsp;Regresar</i>
+                        </Button>
+                        <Button @click="enviarTramite()">
+                            <i class="pi pi-arrow-right text">Enviar&nbsp;</i>
+                        </Button>
+                    </div>
+                </div>
+            </div>
+            <!-- {{ datosrecividos }} -->
+        </div>
+    </div>
+
+    <!-- Modal de Carga -->
+    <Dialog v-model:visible="loadingModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
+        header="Cargando datos">
+        <div class="flex align-items-center justify-content-center">
+            <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
+                animationDuration=".5s" />
+            <span class="ml-3">Enviando, espere porfavor...</span>
+        </div>
+    </Dialog>
+    <AppFooter></AppFooter>
 </template>
 
 <script setup>
+import { useStore } from 'vuex';
+import { useRouter } from 'vue-router';
+import { ref, onMounted, watch } from 'vue';
+import AppFooter from '@/layout/AppFooter.vue';
+import AppTopbar from '@/layout/AppTopbar.vue';
+import AppDatos from './Components/Datos.vue';
+import ListaArchivos from './Components/ListaArchivos.vue';
+import workflowService from '@/services/workflow.service';
+import documentService from '@/services/document.service';
+import designacionTribunalService from '@/services/designacionTribunal.service';
+import editDocumentService from '@/services/editDocument.service';
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
 
+const confirm = useConfirm();
+const toast = useToast();
+
+// Referencias y Estados
+const router = useRouter();
+const store = useStore();
+const loadingModal = ref(false);
+const datosrecividos = store.getters.getData;
+const swdoc = !datosrecividos.fechafin;
+const comentario = ref('');
+const cond = ref('si');
+const valRef = ref(null);
+const listaArchivosKey = ref(0);
+
+const modalidad = ref()
+const titulo = ref()
+const tutor = ref()
+
+const nomArchivos = ref(['1. Nota de suficiencia del tutor', '2. Trabajo de Grado']);
+const valueArchivos = ref(["nota_suficiencia_tutor", "trabajo_grado"]);
+
+onMounted(async () => {
+    try {
+        const { data } = await designacionTribunalService.obtenerDesignacionTribunal({ 'nrotramite': datosrecividos.nrotramite });
+        modalidad.value = data.aprobacion_Perfil.modalidad;
+        titulo.value = data.aprobacion_Perfil.titulo;
+        tutor.value = data.aprobacion_Perfil.tutor;
+    } catch (error) {
+        console.error('Error al obtener la modalidad:', error);
+    }
+});
+
+// Watcher para modalidad
+watch(modalidad, (newModalidad) => {
+    if (newModalidad && newModalidad !== 'Tesis') {
+        nomArchivos.value.push('3. Carta de conclusion de la Institucion o empresa');
+        valueArchivos.value.push('carta_conclusion_institucion');
+        listaArchivosKey.value += 1;
+    }
+}, { immediate: true });
+
+// Función para enviar trámite
+async function enviarTramite() {
+    if (valRef.value.validarRadioButtons()) {
+        confirm.require({
+            message: 'Está seguro de enviar estos datos',
+            header: 'Confirmación',
+            icon: 'pi pi-question-circle',
+            accept: async () => {
+                try {
+                    const result = await valRef.value.todosDocumentosCorrectos();
+                    if (!result) {
+                        cond.value = 'no';
+                        comentario.value = 'observado';
+                    }
+                    await procesarEnvio();
+                } catch (error) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
+                }
+            }
+        });
+    }
+}
+
+// Función para procesar envío
+async function procesarEnvio() {
+    const tb = valRef.value.tabla;
+    const nt = datosrecividos.nrotramite;
+
+    const enviarSolicitud = async (index) => {
+        if (index < tb.length) {
+            await actualizarDocumento(index, tb[index], nt);
+            await enviarSolicitud(index + 1);
+        } else {
+            await avanzarProceso(nt);
+        }
+    };
+
+    await enviarSolicitud(0);
+}
+
+// Función para actualizar documentos
+async function actualizarDocumento(index, doc, nroTramite) {
+    const corr = doc.correcto.value;
+    const obs = corr === 'correcto' ? corr : doc.errores.value;
+    const dat = {
+        columna: valueArchivos.value[index],
+        observacion: obs,
+        nrotramite: nroTramite,
+        tabla: 'designacion_tribunal'
+    };
+    await documentService.actualizarobservacionDocumentos(dat);
+}
+
+// Función para avanzar proceso y editar documento
+async function avanzarProceso(nroTramite) {
+    const b = datosrecividos.flujo;
+    const c = datosrecividos.proceso;
+    const env = {
+        'flujo': b,
+        'proceso': c,
+        'tramiteId': nroTramite,
+        'comentario': comentario.value,
+        'condicion': cond.value
+    };
+    try {
+        const response = await workflowService.siguienteproceso(env);
+        if (response) {
+            await generarHojaDeRuta(nroTramite);
+        }
+    } catch (error) {
+        alert(error);
+    }
+}
+
+// Función para editar documento
+async function generarHojaDeRuta(nroTramite) {
+    const r = datosrecividos.rol;
+    const f = datosrecividos.formulario;
+    const obs = comentario.value
+    const datosFormateados = { nrotramite: nroTramite, rol: r, ref: f, obs: ' -  ' + obs };
+
+    loadingModal.value = true;
+    try {
+        await editDocumentService.editarDocumento(datosFormateados);
+        redireccionar("/hoja-ruta");
+    } catch (error) {
+        alert('Error al generar la hoja de ruta', error);
+        redireccionar("/tramite-pendiente");
+    } finally {
+        loadingModal.value = false;
+    }
+}
+
+// Función auxiliar para redireccionar
+function redireccionar(url) {
+    router.replace(url);
+}
 </script>
+
+<style scoped>
+/* Puedes agregar tus estilos aquí */
+</style>

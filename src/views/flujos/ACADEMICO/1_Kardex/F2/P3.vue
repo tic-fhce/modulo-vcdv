@@ -1,14 +1,16 @@
 <template>
+    <Toast />
+    <ConfirmDialog />
     <AppTopbar></AppTopbar>
     <br>
     <div class="layout-main-container">
         <div style="width: 80%;">
             <div class="card">
 
-                <AppDatos :active="true" :titulo="'INSCRIPCION DE MATERIAS EXTRA'"></AppDatos>
+                <AppDatos :active="true" :titulo="'INSCRIPCIÓN DE MATERIAS EXTRA'"></AppDatos>
 
                 <ListaArchivos ref="valRef" :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
-                     :mostrarObservacionesProp="true" :mostrarRevision="true" :tabla="'materia_extra'"/>
+                    :mostrarObservacionesProp="true" :mostrarRevision="true" :tabla="'materia_extra'" />
                 <br><br>
                 <div>
                     <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
@@ -25,6 +27,15 @@
             <!-- {{ datosrecividos }} -->
         </div>
     </div>
+    <!-- Modal de Carga -->
+    <Dialog v-model:visible="loadingModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
+        header="Cargando datos">
+        <div class="flex align-items-center justify-content-center">
+            <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
+                animationDuration=".5s" />
+            <span class="ml-3">Enviando, espere porfavor...</span>
+        </div>
+    </Dialog>
     <AppFooter></AppFooter>
 </template>
 
@@ -35,12 +46,19 @@ import { createApp, ref, computed, onMounted } from 'vue';
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
 import AppDatos from './Components/Datos.vue'
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+import editDocumentService from '@/services/editDocument.service';
 import ListaArchivos from './Components/ListaArchivos.vue'
 import workflowService from '@/services/workflow.service';
 import documentService from '@/services/document.service';
 
 const router = useRouter()
 const store = useStore()
+const confirm = useConfirm();
+const toast = useToast();
+
+const loadingModal = ref(false);
 const datosrecividos = store.getters.getData
 const swdoc = !datosrecividos.fechafin
 
@@ -53,49 +71,77 @@ const valueArchivos = ref(["solicitud", "respaldo"]);
 
 async function enviarTramite() {
     if (valRef.value.validarRadioButtons()) {
-        const confirmed = confirm('¿Esta seguro de enviar estos datos?');
-        if (confirmed) {
-            const result = await valRef.value.todosDocumentosCorrectos();
-            //console.log(result)
-            if (!result) {
-                cond.value = 'no'
-                comentario.value = 'observado'
-            }
-            const tb = valRef.value.tabla;
-            const nt = datosrecividos.nrotramite;
-            const enviarSolicitud = async (index) => {
-                if (index < tb.length) {
-                    const e = tb[index];
-                    const corr = e.correcto.value;
-                    const err = e.errores.value;
-                    let obs;
-
-                    if (corr === 'correcto') {
-                        obs = corr;
-                    } else {
-                        obs = err;
+        confirm.require({
+            message: 'Está seguro de enviar estos datos',
+            header: 'Confirmación',
+            icon: 'pi pi-question-circle',
+            accept: async () => {
+                try {
+                    const result = await valRef.value.todosDocumentosCorrectos();
+                    //console.log(result)
+                    if (!result) {
+                        cond.value = 'no'
+                        comentario.value = 'observado'
                     }
-                    const dat = { columna: valueArchivos.value[index], observacion: obs, nrotramite: nt, tabla: 'materia_extra' };
-                    await documentService.actualizarobservacionDocumentos(dat);
+                    const tb = valRef.value.tabla;
+                    const nt = datosrecividos.nrotramite;
+                    const enviarSolicitud = async (index) => {
+                        if (index < tb.length) {
+                            const e = tb[index];
+                            const corr = e.correcto.value;
+                            const err = e.errores.value;
+                            let obs;
 
-                    await enviarSolicitud(index + 1);
-                } else {
-                    const b = datosrecividos.flujo
-                    const c = datosrecividos.proceso
-                    try {
-                        const env = { 'flujo': b, 'proceso': c, 'tramiteId': nt, 'comentario': comentario.value, 'condicion': cond.value }
-                        await workflowService.siguienteproceso(env)
-                    } catch (error) {
-                        alert(error);
-                    }
-                    redireccionar("/tramite-pendiente")
+                            if (corr === 'correcto') {
+                                obs = corr;
+                            } else {
+                                obs = err;
+                            }
+                            const dat = { columna: valueArchivos.value[index], observacion: obs, nrotramite: nt, tabla: 'materia_extra' };
+                            await documentService.actualizarobservacionDocumentos(dat);
 
+                            await enviarSolicitud(index + 1);
+                        } else {
+                            const b = datosrecividos.flujo
+                            const c = datosrecividos.proceso
+                            try {
+                                const env = { 'flujo': b, 'proceso': c, 'tramiteId': nt, 'comentario': comentario.value, 'condicion': cond.value }
+                                const response = await workflowService.siguienteproceso(env);
+                                if (response) {
+                                    await generarHojaDeRuta();
+                                }
+                            } catch (error) {
+                                toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
+                            }
+                            redireccionar("/tramite-pendiente")
+
+                        }
+                    };
+                    await enviarSolicitud(0);
+                } catch (error) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
                 }
-            };
-            await enviarSolicitud(0);
-        } else {
-            // El usuario canceló
-        }
+            }
+        });
+    }
+}
+
+async function generarHojaDeRuta() {
+    const nt = datosrecividos.nrotramite;
+    const r = datosrecividos.rol;
+    const f = datosrecividos.formulario;
+    const obs = comentario.value;
+    const datosFormateados = { nrotramite: nt, rol: r, ref: f, obs: ' -  ' + obs };
+
+    loadingModal.value = true;
+    try {
+        await editDocumentService.editarDocumento(datosFormateados);
+        redireccionar("/hoja-ruta");
+    } catch (error) {
+        alert('Error al generar la hoja de ruta', error);
+        redireccionar("/tramite-pendiente");
+    } finally {
+        loadingModal.value = false;
     }
 }
 

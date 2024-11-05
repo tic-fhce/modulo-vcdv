@@ -2,7 +2,7 @@ import { Api } from "./api.service"
 
 export default {
     actulizarColumna(datos){
-        return Api().post("/convalidacion01/actualizar", datos)
+        return Api().patch("/convalidacion01/actualizar", datos)
     },
     obtenerColumna(datos){
         return Api().post("/convalidacion01/obtener", datos)

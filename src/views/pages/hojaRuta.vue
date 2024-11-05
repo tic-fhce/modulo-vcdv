@@ -1,6 +1,6 @@
 <template>
     <div class="card">
-        <h4 style="color: blue; text-align: center;">Trámites</h4>
+        <h4 style="color: blue; text-align: center;">Seguimiento de Trámites</h4>
         <DataTable v-model:filters="filters" :value="Lista" paginator :rows="10" dataKey="id" filterDisplay="row"
             :loading="loading" :globalFilterFields="['nrotramite', 'fecha_inicio', 'solicitud', 'unidad', 'estado']">
             <template #header>

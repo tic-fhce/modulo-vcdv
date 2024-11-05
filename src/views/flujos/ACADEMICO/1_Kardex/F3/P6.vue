@@ -1,14 +1,19 @@
 <template>
     <AppTopbar></AppTopbar>
+    <Toast />
+    <ConfirmDialog />
     <br>
     <div class="layout-main-container">
         <div style="width: 80%;">
             <div class="card">
 
                 <AppDatos :active="true" :titulo="'SOLICITUD DE CONVALIDACION DE MATERIAS DE PLAN A PLAN'"></AppDatos>
-
-                <ListaArchivos :valueArchivos="valueArchivos" :nomArchivos="nomArchivos" :tabla="'convalidacion_01'"
-                    :swfirmar="true" :docfirma="'informe_convalidacion'" />
+                <ListaArchivos :valueArchivos="valueArchivos2" :nomArchivos="nomArchivos2" :tabla="'convalidacion_01'"
+                    :nom-division="'DOCUMENTOS DEL ESTUDIANTE'" />
+                <br><br>
+                <ListaArchivos ref="valRef" :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
+                    :tabla="'convalidacion_01'" :mostrarVFirma="true" :nom-division="'INFORME DE CONVALIDACIÓN'"
+                    :mostrar-firmar-doc="true" />
                 <br><br>
                 <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
                     <Button @click="redireccionar('/tramite-concluido')" severity="warning"><i
@@ -23,6 +28,15 @@
             <!-- {{ datosrecividos }} -->
         </div>
     </div>
+    <!-- Modal de Carga -->
+    <Dialog v-model:visible="loadingModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
+        header="Cargando datos">
+        <div class="flex align-items-center justify-content-center">
+            <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
+                animationDuration=".5s" />
+            <span class="ml-3">Enviando, espere porfavor...</span>
+        </div>
+    </Dialog>
     <AppFooter></AppFooter>
 </template>
 
@@ -35,7 +49,14 @@ import AppTopbar from '@/layout/AppTopbar.vue';
 import AppDatos from './Components/Datos.vue';
 import ListaArchivos from './Components/ListaArchivos.vue'
 import workflowService from '@/services/workflow.service';
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+import editDocumentService from '@/services/editDocument.service';
 
+const confirm = useConfirm();
+const toast = useToast();
+
+const loadingModal = ref(false);
 
 const router = useRouter()
 const store = useStore()
@@ -45,35 +66,60 @@ const swdoc = !datosrecividos.fechafin
 const valueArchivos = ["informe_convalidacion"];
 const nomArchivos = ["1. Informe de Convalidacion"];
 
-const nombre = ref()
-const ci = ref()
-const celular = ref()
+const valueArchivos2 = ["nota_director", "cedula_identidad", "record_academico"];
+const nomArchivos2 = ["1. Nota dirigida al Director", "2. Cedula de Identidad", "3. Record Academico"];
 
 async function enviarTramite() {
-    const confirmed = confirm('¿Esta seguro de enviar estos datos?');
-    if (confirmed) {
-        const a = datosrecividos.nrotramite
-        const b = datosrecividos.flujo
-        const c = datosrecividos.proceso
+    confirm.require({
+        message: 'Está seguro de enviar estos datos',
+        header: 'Confirmación',
+        icon: 'pi pi-question-circle',
+        accept: async () => {
+            try {
+                const a = datosrecividos.nrotramite
+                const b = datosrecividos.flujo
+                const c = datosrecividos.proceso
 
-        try {
-            const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' }
+                try {
+                    const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' }
 
-            await workflowService.siguienteproceso(env)
+                    const response = await workflowService.siguienteproceso(env);
+                    if (response) {
+                        await generarHojaDeRuta();
+                    }
 
-        } catch (error) {
-            alert(error);
+                } catch (error) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
+                }
+
+                redireccionar("/tramite-pendiente");
+            } catch (error) {
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
+            }
         }
-
-        router.push("/tramite-concluido");
-    } else {
-        // El usuario canceló
-    }
+    });
 }
 function redireccionar(url) {
     router.replace(url)
 }
 
+async function generarHojaDeRuta() {
+    const nt = datosrecividos.nrotramite;
+    const r = datosrecividos.rol;
+    const f = datosrecividos.formulario;
+    const datosFormateados = { nrotramite: nt, rol: r, ref: f, obs: '' };
+
+    loadingModal.value = true;
+    try {
+        await editDocumentService.editarDocumento(datosFormateados);
+        redireccionar("/hoja-ruta");
+    } catch (error) {
+        alert('Error al generar la hoja de ruta', error);
+        redireccionar("/tramite-pendiente");
+    } finally {
+        loadingModal.value = false;
+    }
+}
 
 </script>
 

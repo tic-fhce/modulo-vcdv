@@ -1,66 +1,61 @@
 <template>
+    <Toast />
+    <ConfirmDialog />
     <AppTopbar></AppTopbar>
     <br>
     <div class="layout-main-container">
         <div class="col-12 mb-2 lg:col-11 lg:mb-0">
             <div class="card">
 
-                <AppDatos :active="true" :titulo="'CAMBIO DE MODALIDAD, TITULO o TUTOR DE GRADO'"></AppDatos>
+                <!-- Datos principales -->
+                <AppDatos :active="true" :titulo="'APROBACIÓN DE PERFIL DE GRADO'"></AppDatos>
 
                 <!-- Modalidad y Título -->
-                <div class="mt-3 space-y-2">
-                    <div class="field">
-                        <span class="mr-1 font-bold">Modalidad de Graduacion Actual:</span>
-                        <span style="color: blue; font-weight: bold;">{{ modalidadActualSeleccionada }}</span>
-                    </div>
-                    <div class="field">
-                        <span class="mr-1 font-bold">Titulo Actual del Trabajo de Grado:</span>
-                        <span style="color: blue; font-weight: bold;">{{ tituloActual }}</span>
-                    </div>
+                <div class="card">
+                    <h5 style="text-decoration: underline;">DATOS DEL PERFIL DE GRADO</h5><br>
+                    <div class="mt-3 space-y-2">
+                        <div class="field">
+                            <span class="mr-1" style="font-weight: bold;">Modalidad de Graduacion:</span>
+                            <span style="color: blue; font-weight: bold;">{{ modalidad }}</span>
+                        </div>
+                        <div class="field">
+                            <span class="mr-1" style="font-weight: bold;">Titulo del Trabajo de Grado:</span>
+                            <span style="color: blue; font-weight: bold;">{{ titulo }}</span>
+                        </div>
+                        <div class="field">
+                            <span class="mr-1" style="font-weight: bold;">Tutor del Trabajo de Grado:</span>
+                            <span style="color: blue; font-weight: bold;">{{ tutor }}</span>
+                        </div>
+                    </div><br>
                 </div>
-                <br />
-            </div>
 
-            <div class="card">
-                <h5 style="color: red; text-align: center;">SOLICITUD DE CAMBIO</h5><br>
-
-                <div class="mt-3 space-y-2">
-                    <div class="field">
-                        <span class="mr-1 font-bold">Cambio de:</span>
-                        <span style="color: blue; font-weight: bold;">{{ cambio }} </span>
-                    </div>
-                    <div class="field" v-if="cambio == 'Modalidad'">
-                        <span class="mr-1 font-bold">Modalidad de Graduacion:</span>
-                        <span style="color: blue; font-weight: bold;">{{ n_modalidad }}</span>
-                    </div>
-                    <div class="field" v-if="cambio == 'Modalidad' || cambio == 'Titulo'">
-                        <span class="mr-1 font-bold">Titulo del Trabajo de Grado:</span>
-                        <span style="color: blue; font-weight: bold;">{{ n_titulo }}</span>
-                    </div>
-                </div>
-                <br />
-
-                <ListaArchivos :valueArchivos="valueArchivos1" :nomArchivos="nomArchivos1" :tabla="'cambio_modalidad'"
-                    :nomDivision="'RESOLUCION'" />
-
+                <!-- Lista de Archivos -->
+                <ListaArchivos :key="listaArchivosKey" :valueArchivos="valueArchivos" :mostrarObservacionesProp="true"
+                    :nomArchivos="nomArchivos" :tabla="'aprobacion_perfil'"
+                    :nomDivision="'DOCUMENTOS DEL ESTUDIANTE'" />
                 <br><br>
-
-                <ListaArchivos :key="listaArchivosKey" :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
-                    :tabla="'cambio_modalidad'" :nomDivision="'DOCUMENTOS DEL ESTUDIANTE'" />
-
+                <ListaArchivos :valueArchivos="valueArchivos2" :nomArchivos="nomArchivos2" :tabla="'aprobacion_perfil'"
+                    :nomDivision="'RESOLUCIÓN'" :mostrar-v-firma="true"/>
                 <br><br>
-                <!-- <h6 :style="{ color: 'blue', textTransform: 'uppercase' }">
-                    presione en enviar y inicie el tramite para solicitar la designación de su tribunal revisor de grado.
-                </h6>    -->
+                <!-- Botones de Acción -->
                 <div class="flex justify-content-left flex-wrap gap-3">
-                    <Button @click="redireccionar('/tramite-concluido')" severity="warning"><i
-                            class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
-                    <!-- <Button @click="enviarTramite()"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button> -->
+                    <Button @click="redireccionar('/tramite-concluido')" severity="warning">
+                        <i class="pi pi-arrow-left">&nbsp;Regresar</i>
+                    </Button>
                 </div>
             </div>
-
         </div>
     </div>
+
+    <!-- Modal de Carga -->
+    <Dialog v-model:visible="loadingModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
+        header="Cargando datos">
+        <div class="flex align-items-center justify-content-center">
+            <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
+                animationDuration=".5s" />
+            <span class="ml-3">Enviando, espere porfavor...</span>
+        </div>
+    </Dialog>
     <AppFooter></AppFooter>
 </template>
 
@@ -68,88 +63,80 @@
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
 import { ref, onMounted, watch } from 'vue';
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+
+// Componentes
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
 import AppDatos from './Components/Datos.vue';
-import ListaArchivos from './Components/ListaArchivos.vue'
-import workflowService from '@/services/workflow.service';
+import ListaArchivos from './Components/ListaArchivos.vue';
+
+// Servicios
 import aprobacionPerfilService from '@/services/aprobacionPerfil.service';
 
-import cambioModalidadService from '@/services/cambioModalidad.service';
-import designacionTribunalService from '@/services/designacionTribunal.service';
-import editDocumentService from '@/services/editDocument.service';
+const confirm = useConfirm();
+const toast = useToast();
 
-const router = useRouter()
-const store = useStore()
-const datosrecividos = store.getters.getData
-const swdoc = !datosrecividos.fechafin
+// Variables reactivas y referencias
+const router = useRouter();
+const store = useStore();
+const loadingModal = ref(false);
+const datosrecividos = store.getters.getData;
+const swdoc = !datosrecividos.fechafin;
+const listaArchivosKey = ref(0);
+const docRef = ref(null);
+
 const modalidad = ref()
 const titulo = ref()
-const listaArchivosKey = ref(0);
+const tutor = ref()
 
-const nomArchivos = ref(['1. Nota dirigida al Director', '2. Nota de aceptacion del tutor', '3. Fotocopia simple de conclusion de estudios', '4. Record academico', '5. Perfil de grado']);
-const valueArchivos = ref(["nota_director", "nota_tutor", "conclusion_estudios", "record_academico", "perfil_grado"]);
+const nomArchivos = ref([
+    '1. Nota dirigida al Director',
+    '2. Nota de aceptacion del tutor',
+    '3. Fotocopia simple de conclusion de estudios',
+    '4. Record academico',
+    '5. Perfil de grado'
+]);
 
-const nomArchivos1 = ref(['1. Resolucion de Perfil de Grado']);
-const valueArchivos1 = ref(["resolucion_perfil"]);
+const valueArchivos = ref([
+    "nota_director",
+    "nota_tutor",
+    "conclusion_estudios",
+    "record_academico",
+    "perfil_grado"
+]);
 
-const tituloActual = ref('');
-const modalidadActualSeleccionada = ref();
+const nomArchivos2 = ref(['1. Resolucion de Perfil de Grado']);
+const valueArchivos2 = ref(["resolucion_perfil"]);
 
-const cambio = ref()
-const n_modalidad = ref()
-const n_titulo = ref()
-const n_tutor = ref()
-
+// Hook onMounted para obtener los datos iniciales
 onMounted(async () => {
-    const dat = { 'nrotramite': datosrecividos.nrotramite };
     try {
-        const resp = await cambioModalidadService.obtenerFila(dat);
-        cambio.value = resp.data.cambio
-        n_modalidad.value = resp.data.n_modalidad
-        n_titulo.value = resp.data.n_titulo
-        n_tutor.value = resp.data.n_tutor
-
-        const { data } = await designacionTribunalService.obtenerPerfilGradoId({ idPerfil: resp.data.aprobacion_perfil_id });
-        modalidadActualSeleccionada.value = data[0].modalidad;
-        tituloActual.value = data[0].titulo;
-
-        if (cambio.value == 'Modalidad') {
-            if (n_modalidad.value != 'Tesis') {
-                nomArchivos.value.push('4. Carta de aceptacion de propuesta por la Institucion o empresa')
-                valueArchivos.value.push('carta_institucion')
-            }
-        }
-
+        const { data } = await aprobacionPerfilService.obtenerAprobacionPerfil({ 'nrotramite': datosrecividos.nrotramite });
+        modalidad.value = data.modalidad;
+        titulo.value = data.titulo;
+        tutor.value = data.tutor;
     } catch (error) {
         console.error('Error al obtener la modalidad:', error);
     }
 });
 
-async function enviarTramite() {
-    const confirmed = confirm('¿Esta seguro de enviar estos datos?');
-    if (confirmed) {
-        const a = datosrecividos.nrotramite
-        const b = datosrecividos.flujo
-        const c = datosrecividos.proceso
-
-        try {
-            const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' }
-
-            await workflowService.siguienteproceso(env)
-
-        } catch (error) {
-            alert(error);
-        }
-
-        router.push("/tramite-pendiente");
-    } else {
-        // El usuario canceló
+// Observador para cambios en la modalidad
+watch(modalidad, (newModalidad) => {
+    if (newModalidad && newModalidad !== 'Tesis') {
+        nomArchivos.value.push('6. Aceptacion formal de la propuesta por la Institucion o empresa');
+        valueArchivos.value.push('carta_institucion');
+        listaArchivosKey.value += 1;
     }
+}, { immediate: true });
 
-}
-
+// Función para redireccionar
 function redireccionar(url) {
-    router.replace(url)
+    router.replace(url);
 }
 </script>
+
+<style scoped>
+/* Estilos personalizados aquí */
+</style>

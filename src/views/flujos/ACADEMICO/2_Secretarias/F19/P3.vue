@@ -1,57 +1,49 @@
 <template>
+    <Toast />
+    <ConfirmDialog />
     <AppTopbar></AppTopbar>
     <br>
     <div class="layout-main-container">
         <div class="col-12 mb-2 lg:col-11 lg:mb-0">
             <div class="card">
 
-                <AppDatos :active="true" :titulo="'CAMBIO DE MODALIDAD, TITULO o TUTOR DE GRADO'"></AppDatos>
-                <!-- Modalidad y Título -->
-                <div class="mt-3 space-y-2">
-                    <div class="field">
-                        <span class="mr-1 font-bold">Modalidad de Graduacion Actual:</span>
-                        <span style="color: blue; font-weight: bold;">{{ modalidadActualSeleccionada }}</span>
-                    </div>
-                    <div class="field">
-                        <span class="mr-1 font-bold">Titulo Actual del Trabajo de Grado:</span>
-                        <span style="color: blue; font-weight: bold;">{{ tituloActual }}</span>
-                    </div>
-                </div>
-                <br />
-            </div>
+                <AppDatos :active="true" :titulo="'APROBACIÓN DE PERFIL DE GRADO'"></AppDatos>
 
-            <div class="card">
-                <h5 style="color: red; text-align: center;">SOLICITUD DE CAMBIO</h5><br>
-
-                <div class="mt-3 space-y-2">
-                    <div class="field">
-                        <span class="mr-1 font-bold">Cambio de:</span>
-                        <span style="color: blue; font-weight: bold;">{{ cambio }} </span>
-                    </div>
-                    <div class="field" v-if="cambio == 'Modalidad'">
-                        <span class="mr-1 font-bold">Modalidad de Graduacion:</span>
-                        <span style="color: blue; font-weight: bold;">{{ n_modalidad }}</span>
-                    </div>
-                    <div class="field" v-if="cambio == 'Modalidad' || cambio == 'Titulo'">
-                        <span class="mr-1 font-bold">Titulo del Trabajo de Grado:</span>
-                        <span style="color: blue; font-weight: bold;">{{ n_titulo }}</span>
-                    </div>
+                <div class="card">
+                    <h5 style="text-decoration: underline;">DATOS DEL PERFIL DE GRADO</h5><br>
+                    <div class="mt-3 space-y-2">
+                        <div class="field">
+                            <span class="mr-1" style="font-weight: bold;">Modalidad de Graduacion:</span>
+                            <span style="color: blue; font-weight: bold;">{{ modalidad }}</span>
+                        </div>
+                        <div class="field">
+                            <span class="mr-1" style="font-weight: bold;">Titulo del Trabajo de Grado:</span>
+                            <span style="color: blue; font-weight: bold;">{{ titulo }}</span>
+                        </div>
+                        <div class="field">
+                            <span class="mr-1" style="font-weight: bold;">Tutor del Trabajo de Grado:</span>
+                            <span style="color: blue; font-weight: bold;">{{ tutor }}</span>
+                        </div>
+                    </div><br>
                 </div>
-                <br />
 
                 <ListaArchivos :key="listaArchivosKey" ref="valRef" :valueArchivos="valueArchivos"
                     :nomArchivos="nomArchivos" :mostrarObservacionesProp="true" :mostrarRevision="true"
-                    :tabla="'cambio_modalidad'" :nomDivision="'DOCUMENTOS DEL ESTUDIANTE'" />
+                    :tabla="'aprobacion_perfil'" :nomDivision="'DOCUMENTOS DEL ESTUDIANTE'" />
                 <br><br>
                 <div>
                     <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
-                        <Button @click="redireccionar('/tramite-concluido')" severity="warning"><i
-                                class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
+                        <Button @click="redireccionar('/tramite-concluido')" severity="warning">
+                            <i class="pi pi-arrow-left">&nbsp;Regresar</i>
+                        </Button>
                     </div>
                     <div v-else class="flex justify-content-left flex-wrap gap-3">
-                        <Button @click="redireccionar('/tramite-pendiente')" severity="warning"><i
-                                class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
-                        <Button @click="enviarTramite()"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
+                        <Button @click="redireccionar('/tramite-pendiente')" severity="warning">
+                            <i class="pi pi-arrow-left">&nbsp;Regresar</i>
+                        </Button>
+                        <Button @click="enviarTramite()">
+                            <i class="pi pi-arrow-right text">Enviar&nbsp;</i>
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -74,121 +66,146 @@
 <script setup>
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
-import { createApp, ref, computed, onMounted, watch } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
-import AppDatos from './Components/Datos.vue'
-import ListaArchivos from './Components/ListaArchivos.vue'
+import AppDatos from './Components/Datos.vue';
+import ListaArchivos from './Components/ListaArchivos.vue';
 import workflowService from '@/services/workflow.service';
 import documentService from '@/services/document.service';
-
-import cambioModalidadService from '@/services/cambioModalidad.service';
-import designacionTribunalService from '@/services/designacionTribunal.service';
+import aprobacionPerfilService from '@/services/aprobacionPerfil.service';
 import editDocumentService from '@/services/editDocument.service';
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
 
-const router = useRouter()
-const store = useStore()
+const confirm = useConfirm();
+const toast = useToast();
+
+// Referencias y Estados
+const router = useRouter();
+const store = useStore();
 const loadingModal = ref(false);
-const datosrecividos = store.getters.getData
-const swdoc = !datosrecividos.fechafin
-
-const comentario = ref('')
-const cond = ref('si')
-const valRef = ref(null)
-
-const modalidad = ref()
+const datosrecividos = store.getters.getData;
+const swdoc = !datosrecividos.fechafin;
+const comentario = ref('');
+const cond = ref('si');
+const valRef = ref(null);
 const listaArchivosKey = ref(0);
 
-const tituloActual = ref('');
-const modalidadActualSeleccionada = ref();
+const modalidad = ref()
+const titulo = ref()
+const tutor = ref()
 
-const cambio = ref()
-const n_modalidad = ref()
-const n_titulo = ref()
-const n_tutor = ref()
-
-const nomArchivos = ref(['1. Nota dirigida al Director', '2. Nota de aceptacion del tutor', '3. Perfil de grado']);
-const valueArchivos = ref(["nota_director", "nota_tutor", "perfil_grado"]);
+const nomArchivos = ref([
+    '1. Nota dirigida al Director',
+    '2. Nota de aceptacion del tutor',
+    '3. Fotocopia simple de conclusion de estudios',
+    '4. Record academico',
+    '5. Perfil de grado'
+]);
+const valueArchivos = ref([
+    "nota_director",
+    "nota_tutor",
+    "conclusion_estudios",
+    "record_academico",
+    "perfil_grado"
+]);
 
 onMounted(async () => {
-    const dat = { 'nrotramite': datosrecividos.nrotramite };
     try {
-        const resp = await cambioModalidadService.obtenerFila(dat);
-        cambio.value = resp.data.cambio
-        n_modalidad.value = resp.data.n_modalidad
-        n_titulo.value = resp.data.n_titulo
-        n_tutor.value = resp.data.n_tutor
-
-        const { data } = await designacionTribunalService.obtenerPerfilGradoId({ idPerfil: resp.data.aprobacion_perfil_id });
-        modalidadActualSeleccionada.value = data[0].modalidad;
-        tituloActual.value = data[0].titulo;
-
-        if (cambio.value == 'Modalidad') {
-            if (n_modalidad.value != 'Tesis') {
-                nomArchivos.value.push('4. Carta de aceptacion de propuesta por la Institucion o empresa')
-                valueArchivos.value.push('carta_institucion')
-                listaArchivosKey.value += 1;
-            }
-        }
-
+        const { data } = await aprobacionPerfilService.obtenerAprobacionPerfil({ 'nrotramite': datosrecividos.nrotramite });
+        modalidad.value = data.modalidad;
+        titulo.value = data.titulo;
+        tutor.value = data.tutor;
     } catch (error) {
         console.error('Error al obtener la modalidad:', error);
     }
 });
 
+// Watcher para modalidad
+watch(modalidad, (newModalidad) => {
+    if (newModalidad && newModalidad !== 'Tesis') {
+        nomArchivos.value.push('6. Aceptacion formal de la propuesta por la Institucion o empresa');
+        valueArchivos.value.push('carta_institucion');
+        listaArchivosKey.value += 1;
+    }
+}, { immediate: true });
+
+// Función para enviar trámite
 async function enviarTramite() {
     if (valRef.value.validarRadioButtons()) {
-        const confirmed = confirm('¿Esta seguro de enviar estos datos?');
-        if (confirmed) {
-            const result = await valRef.value.todosDocumentosCorrectos();
-            //console.log(result)
-            if (!result) {
-                cond.value = 'no'
-                comentario.value = 'observado'
-            }
-            const tb = valRef.value.tabla;
-            const nt = datosrecividos.nrotramite;
-            const enviarSolicitud = async (index) => {
-                if (index < tb.length) {
-                    const e = tb[index];
-                    const corr = e.correcto.value;
-                    const err = e.errores.value;
-                    let obs;
-
-                    if (corr === 'correcto') {
-                        obs = corr;
-                    } else {
-                        obs = err;
+        confirm.require({
+            message: 'Está seguro de enviar estos datos',
+            header: 'Confirmación',
+            icon: 'pi pi-question-circle',
+            accept: async () => {
+                try {
+                    const result = await valRef.value.todosDocumentosCorrectos();
+                    if (!result) {
+                        cond.value = 'no';
+                        comentario.value = 'observado';
                     }
-                    const dat = { columna: valueArchivos.value[index], observacion: obs, nrotramite: nt, tabla: 'cambio_modalidad' };
-                    await documentService.actualizarobservacionDocumentos(dat);
-
-                    await enviarSolicitud(index + 1);
-                } else {
-                    const b = datosrecividos.flujo
-                    const c = datosrecividos.proceso
-                    try {
-                        const env = { 'flujo': b, 'proceso': c, 'tramiteId': nt, 'comentario': comentario.value, 'condicion': cond.value }
-                        const response = await workflowService.siguienteproceso(env);
-                        if (response) {
-                            await generarHojaDeRuta(nt);
-                        }
-                    } catch (error) {
-                        alert(error);
-                    }
+                    await procesarEnvio();
+                } catch (error) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
                 }
-            };
-            await enviarSolicitud(0);
-        } else {
-            // El usuario canceló
-        }
+            }
+        });
     }
 }
 
-function redireccionar(url) {
-    router.replace(url)
+// Función para procesar envío
+async function procesarEnvio() {
+    const tb = valRef.value.tabla;
+    const nt = datosrecividos.nrotramite;
+
+    const enviarSolicitud = async (index) => {
+        if (index < tb.length) {
+            await actualizarDocumento(index, tb[index], nt);
+            await enviarSolicitud(index + 1);
+        } else {
+            await avanzarProceso(nt);
+        }
+    };
+
+    await enviarSolicitud(0);
 }
 
+// Función para actualizar documentos
+async function actualizarDocumento(index, doc, nroTramite) {
+    const corr = doc.correcto.value;
+    const obs = corr === 'correcto' ? corr : doc.errores.value;
+    const dat = {
+        columna: valueArchivos.value[index],
+        observacion: obs,
+        nrotramite: nroTramite,
+        tabla: 'aprobacion_perfil'
+    };
+    await documentService.actualizarobservacionDocumentos(dat);
+}
+
+// Función para avanzar proceso y editar documento
+async function avanzarProceso(nroTramite) {
+    const b = datosrecividos.flujo;
+    const c = datosrecividos.proceso;
+    const env = {
+        'flujo': b,
+        'proceso': c,
+        'tramiteId': nroTramite,
+        'comentario': comentario.value,
+        'condicion': cond.value
+    };
+    try {
+        const response = await workflowService.siguienteproceso(env);
+        if (response) {
+            await generarHojaDeRuta(nroTramite);
+        }
+    } catch (error) {
+        alert(error);
+    }
+}
+
+// Función para editar documento
 async function generarHojaDeRuta(nroTramite) {
     const r = datosrecividos.rol;
     const f = datosrecividos.formulario;
@@ -206,4 +223,13 @@ async function generarHojaDeRuta(nroTramite) {
         loadingModal.value = false;
     }
 }
+
+// Función auxiliar para redireccionar
+function redireccionar(url) {
+    router.replace(url);
+}
 </script>
+
+<style scoped>
+/* Puedes agregar tus estilos aquí */
+</style>

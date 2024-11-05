@@ -1,6 +1,6 @@
 import axios from "axios";
 
-let urlBase = "https://localhost:9000/api/token";
+let urlBase = "https://localhost:9000/api";
 
 export function Api() {
 
@@ -15,7 +15,6 @@ export function Api() {
 
     api.interceptors.response.use(response => response, error => {
         if (error.response && error.response.status === 401) {
-            // Optional: Redirect to login, clear local storage, etc.
             console.error("Unauthorized; redirecting to login.");
         }
         return Promise.reject(error);

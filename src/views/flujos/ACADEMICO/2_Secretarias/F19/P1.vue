@@ -1,83 +1,80 @@
 <template>
+    <Toast />
+    <ConfirmDialog />
     <AppTopbar></AppTopbar>
     <br>
     <div class="layout-main-container">
         <div class="col-12 mb-2 lg:col-11 lg:mb-0">
             <div class="grid p-fluid">
                 <div class="card">
-                    <AppDatos :active="true" :titulo="'CAMBIO DE MODALIDAD, TITULO o TUTOR DE GRADO'"></AppDatos>
+                    <AppDatos :active="true" :titulo="'APROBACIÓN DE PERFIL DE GRADO'"></AppDatos>
 
-                    <!-- Modalidad y Título -->
-                    <div class="mt-3 space-y-2">
-                        <div class="field">
-                            <span class="mr-1 font-bold">Modalidad de Graduacion Actual:</span>
-                            <span style="color: blue; font-weight: bold;">{{ modalidadActualSeleccionada }}</span>
-                        </div>
-                        <div class="field">
-                            <span class="mr-1 font-bold">Titulo Actual del Trabajo de Grado:</span>
-                            <span style="color: blue; font-weight: bold;">{{ tituloActual }}</span>
-                        </div>
-                    </div>
-                    <br />
+                    <div class="card" style="background-color: rgb(250, 250, 250);">
+                        <h5 style="color: blue; text-decoration: underline;">REQUISITOS DEL TRÁMITE</h5>
 
-                    <!-- Selección de Acción -->
-                    <div class="field grid">
-                        <label for="accion" class="col-12 mb-2 lg:col-3 lg:mb-0">SELECCIONE EL CAMBIO A
-                            REALIZAR:</label>
-                        <div class="col-12 mb-2 lg:col-4 lg:mb-0">
-                            <Dropdown v-model="accionSeleccionada" :options="opcionesCambio" optionLabel="name"
-                                placeholder="Seleccione una opción" />
-                        </div>
-                    </div>
-                </div>
-                <div class="card">
-                    <h5 style="color: red; text-align: center;">SELECCIONE UNA OPCION Y COMPLETE LOS CAMPOS REQUERIDOS
-                    </h5><br>
-                    <div>
-                        <!-- Dropdown para seleccionar modalidad si se cambia la modalidad -->
-                        <div class="field grid" v-if="accionSeleccionada.code == 'Modalidad'">
-                            <label for="name3" class="col-12 mb-2 lg:col-3 lg:mb-0">SELECCIONE LA MODALIDAD DE
-                                GRADUACIÓN:</label>
-                            <div class="col-12 mb-2 lg:col-2 lg:mb-0">
-                                <Dropdown v-model="modalidadSeleccionada" :options="modalidadesFiltradas"
-                                    optionLabel="name" placeholder="Seleccione una modalidad" />
+                        <div class="field grid">
+                            <label for="modalidad" class="col-12 mb-2 lg:col-4 lg:mb-0">
+                                SELECCIONE LA MODALIDAD DE GRADUACIÓN:
+                            </label>
+                            <div class="col-12 mb-2 lg:col-3 lg:mb-9">
+                                <Dropdown id="modalidad" v-model="modalidadSeleccionada"
+                                    :options="documentosDisponibles" optionLabel="name"
+                                    placeholder="Seleccione una modalidad" required />
+                                <span v-if="modalidadError" class="text-red-500">{{ modalidadError }}</span>
                             </div>
                         </div>
 
-                        <!-- Campos para cambiar título y cargar documentos específicos -->
-                        <div class="field grid"
-                            v-if="accionSeleccionada.code == 'Modalidad' || accionSeleccionada.code == 'Titulo'">
-                            <label for="titulo" class="col-12 mb-2 lg:col-3 lg:mb-0">TITULO DEL TRABAJO DE
+                        <!-- Sección de Título del Trabajo de Grado -->
+                        <div class="field grid">
+                            <label for="titulo" class="col-12 mb-2 lg:col-4 lg:mb-0">TÍTULO DEL TRABAJO DE
                                 GRADO:</label>
-                            <div class="col-12 mb-2 lg:col-9 lg:mb-0">
+                            <div class="col-12 mb-2 lg:col-8 lg:mb-0">
                                 <InputText id="titulo" v-model="tituloTrabajo" type="text"
-                                    placeholder="Ingrese el nuevo título" required />
+                                    placeholder="Título del trabajo de grado" required />
                                 <span v-if="tituloError" class="text-red-500">{{ tituloError }}</span>
                             </div>
                         </div>
 
-                        <!-- Documentos requeridos según la opción seleccionada -->
-                        <div class="field grid"
-                            v-if="accionSeleccionada.code == 'Modalidad' || accionSeleccionada.code == 'Titulo' || accionSeleccionada.code == 'Tutor'">
-                            <div v-if="swdoc" class="flex flex-wrap md:flex md:flex-wrap justify-content-center gap-3"
-                                style="width: 100%;">
-                                <div v-for="(documento, index) in documentosFiltrados" :key="index"
-                                    class="col-12 md:col-3 mt-3">
-                                    <div class="center-content" style="border: 2px solid rgba(221, 221, 221, 0.937);">
-                                        <div class="preview-container">
-                                            <img v-if="!fileUrl[index]" src="@/assets/images/img_document.png"
-                                                class="preview">
-                                            <iframe v-else-if="isPDF[index]" :src="fileUrl[index]"
-                                                class="preview"></iframe>
-                                            <img v-else :src="fileUrl[index]" class="preview">
-                                        </div>
-                                        <div class="doc" style="padding-top: 10px;">
-                                            <h5>{{ documento }}</h5>
-                                            <label :for="'file-upload-' + index" class="custom-file-upload">
-                                                <i class="pi pi-upload">&nbsp;Cargar Documento</i>
-                                            </label>
-                                            <input :id="'file-upload-' + index" accept=".pdf, image/*" type="file"
-                                                @change="handleFileUpload(index, $event)" style="display: none;">
+                        <!-- Sección de Tutor del Trabajo de Grado -->
+                        <div class="field grid">
+                            <label for="tutor" class="col-12 mb-2 lg:col-4 lg:mb-0">TUTOR DEL TRABAJO DE
+                                GRADO:</label>
+                            <div class="col-12 mb-2 lg:col-8 lg:mb-0">
+                                <InputText id="tutor" v-model="tutorTrabajo" type="text"
+                                    placeholder="Tutor del trabajo de grado" required />
+                                <span v-if="tutorError" class="text-red-500">{{ tutorError }}</span>
+                            </div>
+                        </div>
+
+                        <!-- Sección de Documentos -->
+                        <div class="card" style="background-color: rgb(250, 250, 250);">
+                            <h5>REQUISITOS DEL TRÁMITE</h5>
+                            <div class="field grid" v-if="swdoc">
+                                <div class="flex flex-wrap md:flex md:flex-wrap justify-content-center gap-3"
+                                    style="width: 100%;">
+                                    <div v-for="(documento, index) in documentos.docs" :key="index"
+                                        class="field col-3 md:col-3">
+                                        <div class="center-content"
+                                            style="border: 2px solid rgba(221, 221, 221, 0.937);">
+                                            <div class="preview-container">
+                                                <img v-if="!fileUrl[index]" src="@/assets/images/img_document.png"
+                                                    class="preview">
+                                                <iframe v-else-if="isPDF[index]" :src="fileUrl[index]"
+                                                    class="preview"></iframe>
+                                                <img v-else :src="fileUrl[index]" class="preview">
+                                            </div>
+                                            <div class="doc" style="padding-top: 10px;">
+                                                <h6>{{ documento }}</h6>
+                                                <label :for="'file-upload-' + index" class="custom-file-upload"> Cargar
+                                                    Documento
+                                                </label>
+                                                <input :id="'file-upload-' + index" accept=".pdf, image/*" type="file"
+                                                    @change="handleFileUpload(index, $event)"
+                                                    style="display: none;"><br>
+                                                <span v-if="documentosError[index]" class="text-red-500">
+                                                    {{ documentosError[index] }}
+                                                </span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -85,18 +82,18 @@
                         </div>
                     </div>
 
+                    <!-- Sección de Botones -->
                     <div class="field grid">
-                        <div v-if="!swdoc" class="flex flex-row gap-3">
+                        <div class="flex flex-row gap-3" v-if="!swdoc">
                             <Button @click="redireccionar('/tramite-concluido')" severity="warning">
                                 <i class="pi pi-arrow-left">&nbsp;Regresar</i>
                             </Button>
                         </div>
-                        <div v-else class="flex flex-row gap-3">
+                        <div class="flex flex-row gap-3" v-else>
                             <Button @click="redireccionar('/tramite-pendiente')" severity="warning">
                                 <i class="pi pi-arrow-left">&nbsp;Regresar</i>
                             </Button>
-                            <Button @click="enviarTramite()"
-                                :disabled="accionSeleccionada.code !== 'Modalidad' && accionSeleccionada.code !== 'Titulo' && accionSeleccionada.code !== 'Tutor'">
+                            <Button @click="enviarTramite()">
                                 <i class="pi pi-arrow-right text">Enviar&nbsp;</i>
                             </Button>
                         </div>
@@ -112,7 +109,7 @@
         <div class="flex align-items-center justify-content-center">
             <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
                 animationDuration=".5s" />
-            <span class="ml-3">Enviando, espere porfavor...</span>
+            <span class="ml-3">Enviando, espere por favor...</span>
         </div>
     </Dialog>
     <AppFooter></AppFooter>
@@ -127,176 +124,167 @@ import AppTopbar from '@/layout/AppTopbar.vue';
 import AppDatos from './Components/Datos.vue';
 import workflowService from '@/services/workflow.service';
 import documentService from '@/services/document.service';
-import cambioModalidadService from '@/services/cambioModalidad.service';
-import designacionTribunalService from '@/services/designacionTribunal.service';
+import aprobacionPerfilService from '@/services/aprobacionPerfil.service';
 import editDocumentService from '@/services/editDocument.service';
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
 
+const confirm = useConfirm();
+const toast = useToast();
+
+// Variables y referencias
 const router = useRouter();
 const store = useStore();
-
+const loadingModal = ref(false);
 const fileUrl = ref([]);
 const isPDF = ref([]);
-const loadingModal = ref(false);
+const documentosError = ref([]); // Para manejar errores en la carga de documentos
 const datosrecividos = store.getters.getData;
 const swdoc = !datosrecividos.fechafin;
-
-const tituloActual = ref('');
-const modalidadActualSeleccionada = ref();
-const perfilId = ref();
 const tituloTrabajo = ref('');
+const tutorTrabajo = ref('');
 const tituloError = ref('');
+const tutorError = ref('');
+const modalidadError = ref(''); // Error para modalidad
 
-const modalidadesFiltradas = ref([]);
-const modalidadSeleccionada = ref(null);
-
-// Opciones para cambio
-const opcionesCambio = [
-    { name: 'Seleccione una opción', code: '' },
-    { name: 'Cambio de Modalidad de Graduación', code: 'Modalidad' },
-    { name: 'Cambio de Título de Grado', code: 'Titulo' },
-    { name: 'Cambio de Tutor de Grado', code: 'Tutor' }
-];
-const accionSeleccionada = ref(opcionesCambio[0]);
-
+// Documentos y modalidad
 const documentosDisponibles = [
     { name: 'TESIS', code: 'Tesis' },
     { name: 'TRABAJO DIRIGIDO', code: 'Trabajo Dirigido' },
-    { name: 'PROYECTO DE GRADO', code: 'Proyecto de Grado' }
+    { name: 'PROYECTO DE GRADO', code: 'Proyecto de Grado' },
 ];
+const modalidadSeleccionada = ref(documentosDisponibles[0]);
 
-// Inicialización de datos al montar el componente
-onMounted(async () => {
-    try {
-        const { data } = await designacionTribunalService.obtenerPerfilGrado();
-        modalidadActualSeleccionada.value = data[0].modalidad;
-        tituloActual.value = data[0].titulo;
-        perfilId.value = data[0].id;
-
-        actualizarModalidadesFiltradas();
-    } catch (error) {
-        console.error('Error al obtener la modalidad:', error);
-    }
-});
-
-// Función para actualizar las modalidades filtradas
-function actualizarModalidadesFiltradas() {
-    modalidadesFiltradas.value = documentosDisponibles.filter(modalidad => modalidad.code !== modalidadActualSeleccionada.value);
-    modalidadSeleccionada.value = modalidadesFiltradas.value.length > 0 ? modalidadesFiltradas.value[0] : null;
-}
-
-// Documentos base para las diferentes modalidades
+const imagenesSeleccionadas = ref([]);
 const documentosBase = [
     '1. Nota dirigida al Director',
     '2. Nota de aceptación del tutor',
-    '3. Perfil de grado'
+    '3. Fotocopia simple de conclusión de estudios',
+    '4. Record académico',
+    '5. Perfil de grado'
 ];
-const nomArchivosBase = ref(["nota_director", "nota_tutor", "perfil_grado"]);
-const imagenesSeleccionadas = Array.from({ length: 3 }, () => ref(null));
-
+const nomArchivosBase = ["nota_director", "nota_tutor", "conclusion_estudios", "record_academico", "perfil_grado"];
 
 // Lista dinámica de documentos y nombres de archivos basada en la modalidad seleccionada
-const documentosFiltrados = computed(() => {
+const documentos = computed(() => {
     const docs = [...documentosBase];
+    const archivos = [...nomArchivosBase];
     if (['Trabajo Dirigido', 'Proyecto de Grado'].includes(modalidadSeleccionada.value.code)) {
-        docs.push('4. Aceptación formal de la propuesta por la Institución o empresa');
-        nomArchivosBase.value = ["nota_director", "nota_tutor", "perfil_grado", "carta_institucion"];
+        docs.push('6. Aceptación formal de la propuesta por la Institución o empresa');
+        archivos.push('carta_institucion');
     }
     imagenesSeleccionadas.value = Array.from({ length: docs.length }, () => ref(null));
-    return docs;
+    documentosError.value = Array.from({ length: docs.length }, () => '');
+    return { docs, archivos };
 });
 
+// Hooks
+onMounted(() => {
+    fileUrl.value = Array(documentos.value.docs.length).fill(null);
+    isPDF.value = Array(documentos.value.docs.length).fill(false);
+});
 
+watch(documentos, () => {
+    fileUrl.value = Array(documentos.value.docs.length).fill(null);
+    isPDF.value = Array(documentos.value.docs.length).fill(false);
+    documentosError.value = Array.from({ length: documentos.value.docs.length }, () => '');
+}, { immediate: true });
+
+// Funciones principales
 async function enviarTramite() {
     if (validarFormulario()) {
-        if (imagenesSeleccionadas.value.every(img => img.value !== null)) {
-            const confirmed = confirm('¿Está seguro de enviar estos datos?');
-            if (confirmed) {
-                const a = datosrecividos.nrotramite;
-                const enviarSolicitud = async (index) => {
-                    if (index < imagenesSeleccionadas.value.length) {
-                        const imagen = imagenesSeleccionadas.value[index];
-                        if (imagen && imagen.value !== null) {
-                            const formData = new FormData();
-                            formData.append('file', imagen.value);
-                            formData.append('nombre', nomArchivosBase.value[index]);
-                            formData.append('nrotramite', a);
-                            formData.append('flujo', datosrecividos.flujo);
-                            formData.append('tabla', 'cambio_modalidad');
-
-                            try {
-                                await documentService.guardarDocumentos(formData);
-                            } catch (error) {
-                                alert(error);
-                            }
-                        }
-                        await enviarSolicitud(index + 1);
-                    } else {
-                        const col1 = { colum: 'aprobacion_perfil_id', param: perfilId.value, nrotramite: a };
-                        await cambioModalidadService.actulizarColumna(col1);
-
-                        const col2 = { colum: 'cambio', param: accionSeleccionada.value.code, nrotramite: a };
-                        await cambioModalidadService.actulizarColumna(col2);
-
-                        if (accionSeleccionada.value.code == 'Modalidad') {
-                            let x = modalidadSeleccionada.value.code;
-                            let y = tituloTrabajo.value;
-
-                            const col3 = { colum: 'n_modalidad', param: x, nrotramite: a };
-                            const col4 = { colum: 'n_titulo', param: y, nrotramite: a };
-                            console.log(col3)
-                            console.log(col4)
-                            await cambioModalidadService.actulizarColumna(col3);
-                            await cambioModalidadService.actulizarColumna(col4);
-
-                        } else if (accionSeleccionada.value.code == 'Titulo') {
-                            let z = tituloTrabajo.value;
-
-                            const col5 = { colum: 'n_titulo', param: z, nrotramite: a };
-                            await cambioModalidadService.actulizarColumna(col5);
-                        }
-
-                        const env = { flujo: datosrecividos.flujo, proceso: datosrecividos.proceso, tramiteId: a, comentario: '', condicion: '' };
-                        const response = await workflowService.siguienteproceso(env);
-                        if (response) {
-                            await generarHojaDeRuta(a);
-                        }
+        if (validarDocumentos()) {
+            confirm.require({
+                message: 'Está seguro de enviar estos datos',
+                header: 'Confirmación',
+                icon: 'pi pi-question-circle',
+                accept: async () => {
+                    try {
+                        await procesarEnvioTramite();
+                    } catch (error) {
+                        toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
                     }
-                };
-                await enviarSolicitud(0);
-            }
-        } else {
-            alert('Cargue los documentos requeridos, por favor');
+                }
+            });
         }
     } else {
-        alert('Por favor, complete todos los campos obligatorios.');
+        toast.add({ severity: 'warn', summary: 'Advertencia ', detail: 'Por favor, complete todos los campos obligatorios.', life: 3000 });
     }
 }
 
-function redireccionar(url) {
-    router.replace(url);
+function validarDocumentos() {
+    let allUploaded = true;
+    documentosError.value = documentos.value.docs.map((doc, index) => {
+        if (!imagenesSeleccionadas.value[index].value) {
+            allUploaded = false;
+            return 'Este documento es obligatorio.';
+        }
+        return '';
+    });
+    return allUploaded;
 }
 
-// Manejo de la carga de archivos
-function handleFileUpload(index, event) {
-    const nuevaImagen = event.target.files[0];
-    if (nuevaImagen) {
-        imagenesSeleccionadas.value[index].value = nuevaImagen;
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            fileUrl.value[index] = e.target.result;
+async function procesarEnvioTramite() {
+    const nroTramite = datosrecividos.nrotramite;
+    try {
+        loadingModal.value = true;
+
+        const data = {
+            nrotramite: nroTramite,
+            modalidad: modalidadSeleccionada.value.code,
+            titulo: tituloTrabajo.value.trim(),
+            tutor: tutorTrabajo.value.trim()
         };
-        reader.readAsDataURL(nuevaImagen);
+        const response = await aprobacionPerfilService.crearAprobaciónPerfil(data);
 
-        isPDF.value[index] = nuevaImagen.type === 'application/pdf';
+        if (response) {
+            for (let index = 0; index < imagenesSeleccionadas.value.length; index++) {
+                await guardarDocumento(index, nroTramite);
+            }
+            await avanzarProceso(nroTramite);
+        }
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Al procesar el trámite', life: 3000 });
+    } finally {
+        loadingModal.value = false;
     }
 }
 
-function validarFormulario() {
-    if ((accionSeleccionada.value.code === 'Titulo' || accionSeleccionada.value.code === 'Modalidad') && !tituloTrabajo.value.trim()) {
-        tituloError.value = 'El título del trabajo de grado es obligatorio.';
-        return false;
+async function guardarDocumento(index, nroTramite) {
+    const imagen = imagenesSeleccionadas.value[index].value;
+    if (imagen) {
+        const formData = new FormData();
+        formData.append('file', imagen);
+        formData.append('nombre', documentos.value.archivos[index]);
+        formData.append('nrotramite', nroTramite);
+        formData.append('flujo', datosrecividos.flujo);
+        formData.append('tabla', 'aprobacion_perfil');
+        try {
+            await documentService.guardarDocumentos(formData);
+        } catch (error) {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'Al guardar el documento', life: 3000 });
+        }
     }
-    return true;
+}
+
+async function avanzarProceso(nroTramite) {
+    const env = {
+        flujo: datosrecividos.flujo,
+        proceso: datosrecividos.proceso,
+        tramiteId: nroTramite,
+        comentario: '',
+        condicion: ''
+    };
+    try {
+        const response = await workflowService.siguienteproceso(env);
+        if (response) {
+            await generarHojaDeRuta(nroTramite);
+        } else {
+            toast.add({ severity: 'error', summary: 'Error', detail: 'No se pudo avanzar al siguiente proceso', life: 3000 });
+        }
+    } catch (error) {
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Al avanzar el proceso', life: 3000 });
+    }
 }
 
 async function generarHojaDeRuta(nroTramite) {
@@ -304,17 +292,60 @@ async function generarHojaDeRuta(nroTramite) {
     const f = datosrecividos.formulario;
     const datosFormateados = { nrotramite: nroTramite, rol: r, ref: f, obs: '' };
 
-    loadingModal.value = true;
     try {
         await editDocumentService.editarDocumento(datosFormateados);
         redireccionar("/hoja-ruta");
     } catch (error) {
-        alert('Error al generar la hoja de ruta', error);
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Al generar la hoja de ruta', life: 3000 });
         redireccionar("/tramite-pendiente");
-    } finally {
-        loadingModal.value = false;
     }
+}
+
+// Handlers y Validaciones
+const handleFileUpload = (index, event) => {
+    if (index >= 0 && index < fileUrl.value.length) {
+        const nuevaImagen = event.target.files[0];
+        if (nuevaImagen) {
+            imagenesSeleccionadas.value[index].value = nuevaImagen;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                fileUrl.value.splice(index, 1, e.target.result);
+            };
+            reader.readAsDataURL(nuevaImagen);
+            isPDF.value.splice(index, 1, nuevaImagen.type === 'application/pdf');
+        }
+    }
+};
+
+function validarFormulario() {
+    let isValid = true;
+    if (!modalidadSeleccionada.value) {
+        modalidadError.value = 'La modalidad de graduación es obligatoria.';
+        isValid = false;
+    } else {
+        modalidadError.value = '';
+    }
+
+    if (!tituloTrabajo.value.trim()) {
+        tituloError.value = 'El título del trabajo de grado es obligatorio.';
+        isValid = false;
+    } else {
+        tituloError.value = '';
+    }
+
+    if (!tutorTrabajo.value.trim()) {
+        tutorError.value = 'El tutor del trabajo de grado es obligatorio.';
+        isValid = false;
+    } else {
+        tutorError.value = '';
+    }
+
+    return isValid;
+}
+
+function redireccionar(url) {
+    router.replace(url);
 }
 </script>
 
-<style></style>
+<style scoped></style>

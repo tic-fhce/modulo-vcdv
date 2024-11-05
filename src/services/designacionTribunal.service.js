@@ -1,6 +1,12 @@
 import { Api } from "./api.service"
 
 export default {
+    crearDesignacionTribunal(datos){
+        return Api().post("/designacionTribunal/crear", datos)
+    },
+    obtenerDesignacionTribunal(nrotramite){
+        return Api().post("/designacionTribunal/obtenerDT", nrotramite)
+    },
     actulizarColumna(datos){
         return Api().patch("/designacionTribunal/actualizar", datos)
     },

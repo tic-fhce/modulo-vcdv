@@ -1,105 +1,127 @@
 <template>
     <AppTopbar></AppTopbar>
+    <Toast />
+    <ConfirmDialog />
     <br>
     <div class="layout-main-container">
         <div style="width: 80%;">
             <div class="card">
 
-                <AppDatos :active="true" :titulo="'SOLICITUD DE CONVALIDACION DE MATERIAS DE OTRAS CARRERAS'"></AppDatos>
+                <AppDatos :active="true" :titulo="'SOLICITUD DE CONVALIDACIÓN DE MATERIAS DE OTRAS CARRERAS'"></AppDatos>
 
-                <ListaArchivos ref="valRef" :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
-                    :mostrarObservacionesProp="true" :mostrarRevision="true" :tabla="'convalidacion_02'" />
+                <ListaArchivos :valueArchivos="valueArchivos2" :nomArchivos="nomArchivos2" :tabla="'convalidacion_02'"
+                    :nom-division="'DOCUMENTOS DEL ESTUDIANTE'" :mostrarObservacionesProp="true" />
                 <br><br>
-                <div>
-                    <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
-                        <Button @click="redireccionar('/tramite-concluido')" severity="warning"><i
-                                class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
-                    </div>
-                    <div v-else class="flex justify-content-left flex-wrap gap-3">
-                        <Button @click="redireccionar('/tramite-pendiente')" severity="warning"><i
-                                class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
-                        <Button @click="enviarTramite()"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
-                    </div>
+                <ListaArchivos :valueArchivos="valueArchivos3" :nomArchivos="nomArchivos3" :tabla="'convalidacion_02'"
+                    :mostrarVFirma="true" :nom-division="'COMISIÓN DE CONVALIDACIÓN'" />
+                <br><br>
+                <ListaArchivos ref="valRef" :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
+                    :mostrarVFirma="true" :nomDivision="'PROYECTO RESOLUCIÓN'" :tabla="'convalidacion_02'" :mostrarFirmarDoc="true" />
+                <br><br>
+                <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
+                    <Button @click="redireccionar('/tramite-concluido')" severity="warning"><i
+                            class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
+                </div>
+                <div v-else class="flex justify-content-left flex-wrap gap-3">
+                    <Button @click="redireccionar('/tramite-pendiente')" severity="warning"><i
+                            class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
+                    <Button @click="enviarTramite()"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
                 </div>
             </div>
-            <!-- {{ datosrecividos }} -->
         </div>
     </div>
+    <!-- Modal de Carga -->
+    <Dialog v-model:visible="loadingModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
+        header="Cargando datos">
+        <div class="flex align-items-center justify-content-center">
+            <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
+                animationDuration=".5s" />
+            <span class="ml-3">Enviando, espere porfavor...</span>
+        </div>
+    </Dialog>
     <AppFooter></AppFooter>
 </template>
 
 <script setup>
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
-import { createApp, ref, computed, onMounted } from 'vue';
+import { ref } from 'vue';
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
-import AppDatos from './Components/Datos.vue'
+import AppDatos from './Components/Datos.vue';
 import ListaArchivos from './Components/ListaArchivos.vue'
 import workflowService from '@/services/workflow.service';
-import documentService from '@/services/document.service';
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+import editDocumentService from '@/services/editDocument.service';
+const confirm = useConfirm();
+const toast = useToast();
 
+const loadingModal = ref(false);
 const router = useRouter()
 const store = useStore()
 const datosrecividos = store.getters.getData
 const swdoc = !datosrecividos.fechafin
-const com = ref('')
+const urlDoc = ref()
 
-const valRef = ref(null)
+const valueArchivos = ref(["proy_resolucion"]);
+const nomArchivos = ref(['1. Proyecto de Resolución']);
 
-const valueArchivos = ["informe_convalidacion", "proy_resolucion"];
-const nomArchivos = ["1. Informe de Convalidacion", "2. Proyecto de Resolucion"];
+const valueArchivos2 = ["nota_director", "formulario_convalidacion", "cedula_identidad", "record_academico_carrera_origen", "contenidos_analiticos"];
+const nomArchivos2 = ['1. Nota dirigida al Director', '2. Formulario de Convalidacion', '3. Cedula de Identidad', '4. Record Academico de la Carrera y Universidad que viene', '5. Contenidos Analiticos'];
+
+const valueArchivos3 = ["informe_convalidacion"];
+const nomArchivos3 = ['1. Informe de convalidación'];
 
 async function enviarTramite() {
-    if (valRef.value.validarRadioButtons()) {
-        const confirmed = confirm('¿Esta seguro de enviar estos datos?');
-        if (confirmed) {
-            const result = await valRef.value.todosDocumentosCorrectos();
-            let cond;
-            if (result) {
-                cond = "si"
-            }
-            else {
-                com.value = "observado"
-                cond = "no"
-            }
-            const tb = valRef.value.tabla;
-            const nt = datosrecividos.nrotramite;
-            const enviarSolicitud = async (index) => {
-                if (index < tb.length) {
-                    const e = tb[index];
-                    const corr = e.correcto.value;
-                    const err = e.errores.value;
-                    let obs;
+    confirm.require({
+        message: 'Está seguro de enviar estos datos',
+        header: 'Confirmación',
+        icon: 'pi pi-question-circle',
+        accept: async () => {
+            try {
+                const a = datosrecividos.nrotramite
+                const b = datosrecividos.flujo
+                const c = datosrecividos.proceso
+                try {
+                    const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' }
 
-                    if (corr === 'correcto') {
-                        obs = corr;
-                    } else {
-                        obs = err;
+                    const response = await workflowService.siguienteproceso(env);
+                    if (response) {
+                        await generarHojaDeRuta();
                     }
-
-                    const dat = { columna: valueArchivos[index], observacion: obs, nrotramite: nt, tabla: 'convalidacion_02' };
-                    await documentService.actualizarobservacionDocumentos(dat);
-
-                    await enviarSolicitud(index + 1);
-                } else {
-                    const b = datosrecividos.flujo
-                    const c = datosrecividos.proceso
-                    try {
-                        const env = { 'flujo': b, 'proceso': c, 'tramiteId': nt, 'comentario': com.value, 'condicion': cond }
-                        await workflowService.siguienteproceso(env)
-                    } catch (error) {
-                        alert(error);
-                    }
-
-                    redireccionar("/tramite-concluido")
-                    
+                } catch (error) {
+                    alert(error);
                 }
-            };
-            await enviarSolicitud(0);
-        } else {
-            // El usuario canceló
+
+                redireccionar("/tramite-pendiente");
+            } catch (error) {
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
+            }
         }
+    });
+}
+
+async function generarHojaDeRuta() {
+    const nt = datosrecividos.nrotramite;
+    const r = datosrecividos.rol;
+    const f = datosrecividos.formulario;
+    let observacion = '';
+    if(datosrecividos.observaciones){
+        observacion = '  - corrección';
+    }
+
+    const datosFormateados = { nrotramite: nt, rol: r, ref: f, obs: observacion };
+
+    loadingModal.value = true;
+    try {
+        await editDocumentService.editarDocumento(datosFormateados);
+        redireccionar("/hoja-ruta");
+    } catch (error) {
+        alert('Error al generar la hoja de ruta', error);
+        redireccionar("/tramite-pendiente");
+    } finally {
+        loadingModal.value = false;
     }
 }
 

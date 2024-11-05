@@ -1,8 +1,8 @@
 <template>
-    <AppTopbar></AppTopbar>
-    <br>
     <Toast />
     <ConfirmDialog />
+    <AppTopbar></AppTopbar>
+    <br>
     <div class="layout-main-container">
         <div class="col-12 mb-2 lg:col-11 lg:mb-0">
             <div class="grid p-fluid">
@@ -59,6 +59,16 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal de Carga -->
+    <Dialog v-model:visible="loadingModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
+        header="Cargando datos">
+        <div class="flex align-items-center justify-content-center">
+            <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
+                animationDuration=".5s" />
+            <span class="ml-3">Enviando, espere porfavor...</span>
+        </div>
+    </Dialog>
     <AppFooter></AppFooter>
 </template>
 
@@ -73,12 +83,14 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useStore } from 'vuex';
 import AppDatos from './Components/Datos.vue';
+import editDocumentService from '@/services/editDocument.service';
 
 const router = useRouter()
 const store = useStore()
 const confirm = useConfirm();
 const toast = useToast();
 
+const loadingModal = ref(false);
 const fileUrl = ref([])
 const isPDF = ref([false])
 const datosrecividos = store.getters.getData
@@ -92,7 +104,7 @@ const imagenesSeleccionadas = Array.from({ length: 2 }, () => ref(null));
 async function enviarTramite() {
     if (imagenesSeleccionadas.every(img => img.value !== null)) {
         confirm.require({
-            message: '¿Está seguro de enviar estos datos?',
+            message: 'Está seguro de enviar estos datos',
             header: 'Confirmación',
             icon: 'pi pi-question-circle',
             accept: async () => {
@@ -111,7 +123,6 @@ async function enviarTramite() {
 
                                 try {
                                     await documentService.guardarDocumentos(formData)
-                                    // await convalidacionPlanPlanService.guardarDocumentos(formData)
                                 } catch (error) {
                                     alert(error);
                                 }
@@ -119,12 +130,14 @@ async function enviarTramite() {
                             await enviarSolicitud(index + 1);
                         } else {
                             const env = { 'flujo': datosrecividos.flujo, 'proceso': datosrecividos.proceso, 'tramiteId': a, 'comentario': '', 'condicion': '' };
-                            await workflowService.siguienteproceso(env);
-                            redireccionar("/tramite-concluido")
+                            const response = await workflowService.siguienteproceso(env);
+                            if (response) {
+                                await generarHojaDeRuta();
+                            }
+                            redireccionar("/hoja-ruta")
                         }
                     };
                     await enviarSolicitud(0);
-                    toast.add({ severity: 'success', summary: 'Éxito', detail: 'Datos enviados correctamente', life: 3000 });
                 } catch (error) {
                     toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
                 }
@@ -148,6 +161,24 @@ const handleFileUpload = (index, event) => {
         isPDF.value[index] = nuevaImagen.type === 'application/pdf'; // Verificar si la imagen es PDF
     }
 };
+
+async function generarHojaDeRuta() {
+    const nt = datosrecividos.nrotramite;
+    const r = datosrecividos.rol;
+    const f = datosrecividos.formulario;
+    const datosFormateados = { nrotramite: nt, rol: r, ref: f, obs: '' };
+
+    loadingModal.value = true;
+    try {
+        await editDocumentService.editarDocumento(datosFormateados);
+        redireccionar("/hoja-ruta");
+    } catch (error) {
+        alert('Error al generar la hoja de ruta', error);
+        redireccionar("/tramite-pendiente");
+    } finally {
+        loadingModal.value = false;
+    }
+}
 
 function redireccionar(url) {
     router.replace(url)

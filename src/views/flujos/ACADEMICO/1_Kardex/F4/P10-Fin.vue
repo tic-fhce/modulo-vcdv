@@ -1,15 +1,19 @@
 <template>
     <AppTopbar></AppTopbar>
+    <Toast />
+    <ConfirmDialog />
     <br>
     <div class="layout-main-container">
         <div style="width: 80%;">
             <div class="card">
 
-                <AppDatos :active="true" :titulo="'SOLICITUD DE CONVALIDACION DE MATERIAS DE OTRAS CARRERAS'"></AppDatos>
+                <AppDatos :active="true" :titulo="'SOLICITUD DE CONVALIDACIÓN DE MATERIAS DE OTRAS CARRERAS'"></AppDatos>
 
-                <ListaArchivos :valueArchivos="valueArchivos" :nomArchivos="nomArchivos" :tabla="'convalidacion_02'"/>
-
-                <!-- <h5 :style="{ color: 'green', textTransform: 'uppercase' }">descargue el informe de convalidacion y realice la migracion de datos al sistema SSA antes de su envio al estudiante</h5> -->
+                <ListaArchivos :valueArchivos="valueArchivos" :nomArchivos="nomArchivos" :tabla="'convalidacion_02'"
+                    :nom-division="'DOCUMENTOS DEL ESTUDIANTE'" :mostrarObservacionesProp="true" />
+                <br><br>
+                <ListaArchivos :valueArchivos="valueArchivos2" :nomArchivos="nomArchivos2" :tabla="'convalidacion_02'"
+                    :mostrarVFirma="true" :nom-division="'RESOLUCIÓN'" />
                 <br><br>
                 <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
                     <Button @click="redireccionar('/tramite-concluido')" severity="warning"><i
@@ -21,61 +25,47 @@
                     <Button @click="enviarTramite()"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
                 </div>
             </div>
-            <!-- {{ datosrecividos }} -->
         </div>
     </div>
+    <!-- Modal de Carga -->
+    <Dialog v-model:visible="loadingModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
+        header="Cargando datos">
+        <div class="flex align-items-center justify-content-center">
+            <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
+                animationDuration=".5s" />
+            <span class="ml-3">Enviando, espere porfavor...</span>
+        </div>
+    </Dialog>
     <AppFooter></AppFooter>
 </template>
 
 <script setup>
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
-import { createApp, ref, computed, onMounted } from 'vue';
+import { ref } from 'vue';
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
 import AppDatos from './Components/Datos.vue';
 import ListaArchivos from './Components/ListaArchivos.vue'
-import workflowService from '@/services/workflow.service';
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+const confirm = useConfirm();
+const toast = useToast();
 
-
+const loadingModal = ref(false);
 const router = useRouter()
 const store = useStore()
 const datosrecividos = store.getters.getData
 const swdoc = !datosrecividos.fechafin
 
-const valueArchivos = ["resolucion"];
-const nomArchivos = ["1. Resolucion de Convalidacion"];
+const valueArchivos = ["nota_director", "formulario_convalidacion", "cedula_identidad", "record_academico_carrera_origen", "contenidos_analiticos"];
+const nomArchivos = ['1. Nota dirigida al Director', '2. Formulario de Convalidacion', '3. Cedula de Identidad', '4. Record Academico de la Carrera y Universidad que viene', '5. Contenidos Analiticos'];
 
-const nombre = ref()
-const ci = ref()
-const celular = ref()
+const valueArchivos2 = [ "resolucion"];
+const nomArchivos2 = ['1. Resolución de Convalidación'];
 
-async function enviarTramite() {
-    const confirmed = confirm('¿Esta seguro de enviar estos datos?');
-    if (confirmed) {
-        const a = datosrecividos.nrotramite
-        const b = datosrecividos.flujo
-        const c = datosrecividos.proceso
 
-        try {
-            const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' }
-
-            await workflowService.siguienteproceso(env)
-
-        } catch (error) {
-            alert(error);
-        }
-
-        router.push("/tramite-concluido");
-    } else {
-        // El usuario canceló
-    }
-}
 function redireccionar(url) {
     router.replace(url)
 }
-
-
 </script>
-
-<style></style>

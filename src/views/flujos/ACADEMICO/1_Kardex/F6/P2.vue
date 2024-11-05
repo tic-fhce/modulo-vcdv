@@ -1,70 +1,41 @@
 <template>
+    <Toast />
+    <ConfirmDialog />
     <AppTopbar></AppTopbar>
     <br>
     <div class="layout-main-container">
         <div style="width: 80%;">
             <div class="card">
 
-                <AppDatos :active="true" :titulo="'SOLICITUD DE CERTIFICADO UNICO DE CALIFICACIONES'"></AppDatos>
+                <AppDatos :active="true" :titulo="'SOLICITUD DE CONVALIDACION DE MATERIAS DE PLAN A PLAN'"></AppDatos>
 
-                <ListaArchivos :valueArchivos="valueArchivos" :nomArchivos="nomArchivos" :tabla="'certificado_conclusion'" />
+                <ListaArchivos ref="valRef" :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
+                    :mostrarObservacionesProp="true" :mostrarRevision="true" :tabla="'certificado_conclusion'" />
                 <br><br>
-            </div>
-
-            <div class="card">
-                <h5>GENERAR EL CERTIFICADO DE CONCLUSION DE ESTUDIOS</h5>
-                <div v-if="loading" class="loading-icon">
-                    <i class="pi pi-spin pi-spinner"></i> Cargando...
-                </div> <br>
-                <div class="flex justify-content-left flex-wrap gap-3">
-                    <Button @click="uploadDocument" :disabled="uploadDone" severity="success">
-                        <i class="pi pi-book"> Crear Documento</i>
-                    </Button>
-                    <Button v-if="uploadDone" :disabled="!swdoc" @click="redirectDocument" severity="info">
-                        <i class="pi pi-link"> Editar Documento</i>
-                    </Button>
-                    <Button v-if="uploadDone" :disabled="!swdoc" @click="downloadDocument" severity="info">
-                        <i class="pi pi-download"> Descargar Documento</i>
-                    </Button>
-                </div>
-                <br><br>
-                <div v-if="uploadDone">
-                    <DataTable :value="documentos" :paginator="false">
-                        <Column header="DOCUMENTO">
-                            <template #body="{ data }">
-                                {{ data.archivo }}
-                            </template>
-                        </Column>
-                        <Column header="ENLACES">
-                            <template #body="{ data }">
-                                <a :href="data.url" @click.prevent="cargarDocumento(data.tipo)">
-                                    <i class="pi pi-link"> Ver Documento</i>
-                                </a>
-                            </template>
-                        </Column>
-                        <Column v-if="swdoc" header="FIRMAR">
-                            <template #body="{ data }">
-                                <Button @click="firmarDocumento(data)" severity="info"><i class="pi pi-pencil">
-                                        Firmar</i></Button>
-                            </template>
-                        </Column>
-                    </DataTable>
-                </div>
-                <br><br>
-                <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
-                    <Button @click="redireccionar('/tramite-concluido')" severity="warning"><i
-                            class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
-                </div>
-                <div v-else class="flex justify-content-left flex-wrap gap-3">
-                    <Button @click="redireccionar('/tramite-pendiente')" severity="warning"><i
-                            class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
-                    <Button @click="enviarTramite()" :disabled="!uploadDone"><i
-                            class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
+                <div>
+                    <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
+                        <Button @click="redireccionar('/tramite-concluido')" severity="warning"><i
+                                class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
+                    </div>
+                    <div v-else class="flex justify-content-left flex-wrap gap-3">
+                        <Button @click="redireccionar('/tramite-pendiente')" severity="warning"><i
+                                class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
+                        <Button @click="enviarTramite()"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
+                    </div>
                 </div>
             </div>
             <!-- {{ datosrecividos }} -->
         </div>
     </div>
+    <!-- Modal de Carga -->
+    <Dialog v-model:visible="loadingModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
+        header="Cargando datos">
+        <div class="flex align-items-center justify-content-center">
+            <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
+                animationDuration=".5s" />
+            <span class="ml-3">Enviando, espere porfavor...</span>
+        </div>
+    </Dialog>
     <AppFooter></AppFooter>
 </template>
 
@@ -74,135 +45,131 @@ import { useRouter } from 'vue-router';
 import { createApp, ref, computed, onMounted } from 'vue';
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
-import AppDatos from './Components/Datos.vue';
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+import AppDatos from './Components/Datos.vue'
 import ListaArchivos from './Components/ListaArchivos.vue'
 import workflowService from '@/services/workflow.service';
-import certificadoConclusionService from '@/services/certificadoConclusion.service'
 import documentService from '@/services/document.service';
-import { handleUpload, handleUrl, handleDownload } from './Components/driveServiceCertificadoConclusion'
+import editDocumentService from '@/services/editDocument.service';
 
+const confirm = useConfirm();
+const toast = useToast();
+
+const loadingModal = ref(false);
 const router = useRouter()
 const store = useStore()
 const datosrecividos = store.getters.getData
 const swdoc = !datosrecividos.fechafin
-const uploadDone = ref(false);
-const urlDoc = ref()
-const loading = ref(false)
-const docDrive = ref('CERTIFICADO CONCLUSION.docx')
+const com = ref('')
 
-const documentos = [{ archivo: '1. Certificado de Conclusion de Estudios', url: urlDoc, tipo: 'certificado_conclusion' }]
+const valRef = ref(null)
 
-const valueArchivos = ['valorada', 'cedula_identidad', 'certificado_unico'];
+const valueArchivos = ['valorada', 'cedula_identidad', 'certificado_unico']
 const nomArchivos = ['1. Valorada del Certificado', '2. Cedula de Identidad', '3. Certificado Unico Calificaciones'];
 
-
-onMounted(async () => {
-    const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'c_certificado_conclusion' };
-    try {
-        const res = await certificadoConclusionService.obtenerColumna(dat);
-        if (res.data != '') {
-            uploadDone.value = true
-            getDocumentUrl();
-        }
-    } catch (error) {
-        console.error(error);
-    }
-});
-
-
-
 async function enviarTramite() {
-    const confirmed = confirm('¿Esta seguro de enviar estos datos?');
-    if (confirmed) {
-        const a = datosrecividos.nrotramite
-        const b = datosrecividos.flujo
-        const c = datosrecividos.proceso
+    if (valRef.value.validarRadioButtons()) {
+        confirm.require({
+            message: 'Está seguro de enviar estos datos',
+            header: 'Confirmación',
+            icon: 'pi pi-question-circle',
+            accept: async () => {
+                try {
+                    const result = await valRef.value.todosDocumentosCorrectos();
+                    let cond;
+                    if (result) {
+                        cond = "si"
+                    }
+                    else {
+                        com.value = "observado"
+                        cond = "no"
+                    }
+                    const tb = valRef.value.tabla;
+                    const nt = datosrecividos.nrotramite;
+                    const enviarSolicitud = async (index) => {
+                        if (index < tb.length) {
+                            const e = tb[index];
+                            const corr = e.correcto.value;
+                            const err = e.errores.value;
+                            let obs;
 
-        try {
-            const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' }
-            await workflowService.siguienteproceso(env)
+                            if (corr === 'correcto') {
+                                obs = corr;
+                            } else {
+                                obs = err;
+                            }
 
-        } catch (error) {
-            alert(error);
-        }
+                            const dat = { columna: valueArchivos[index], observacion: obs, nrotramite: nt, tabla: 'certificado_conclusion' };
+                            await documentService.actualizarobservacionDocumentos(dat);
 
-        router.push("/tramite-concluido");
-    } else {
-        // El usuario canceló
+                            await enviarSolicitud(index + 1);
+                        } else {
+                            const b = datosrecividos.flujo
+                            const c = datosrecividos.proceso
+                            try {
+                                const env = { 'flujo': b, 'proceso': c, 'tramiteId': nt, 'comentario': com.value, 'condicion': cond }
+                                const response = await workflowService.siguienteproceso(env);
+                                if (response) {
+                                    await generarHojaDeRuta();
+                                }
+                            } catch (error) {
+                                toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
+                            }
+
+                            if (result) {
+                                cambiarData()
+                                window.location.replace("/F6/P3")
+                            } else {
+                                redireccionar("/tramite-pendiente")
+                            }
+
+
+                        }
+                    };
+                    await enviarSolicitud(0);
+                } catch (error) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Complete los campos requeridos.', life: 3000 });
+                }
+            }
+        });
     }
-
 }
-
-async function uploadDocument() {
-    loading.value = true
-    try {
-        const message = await handleUpload(docDrive.value, datosrecividos.nrotramite, 'c_certificado_conclusion');
-        alert(message);
-        uploadDone.value = true;
-        if (uploadDone.value) {
-            getDocumentUrl();
-        }
-    } finally {
-        loading.value = false
-    }
-
-}
-
-async function getDocumentUrl() {
-    loading.value = true
-    try {
-        urlDoc.value = await handleUrl(datosrecividos.nrotramite, 'c_certificado_conclusion');
-    } finally {
-        loading.value = false
-    }
-}
-
-
-async function downloadDocument() {
-    loading.value = true
-    try {
-        const message = await handleDownload(datosrecividos.nrotramite, 'c_certificado_conclusion', 'certificado_conclusion', datosrecividos.flujo, 'certificado_conclusion');
-        alert(message);
-    } finally {
-        loading.value = false
-    }
-
-}
-
-function redirectDocument() {
-    loading.value = true
-    try {
-        if (!urlDoc.value) {
-            console.error("URL no está definida");
-            return;
-        }
-        window.open(urlDoc.value, '_blank');
-    } finally {
-        loading.value = false
-    }
-
-}
-
-async function cargarDocumento(nombreDocumento) {
-    try {
-        const nt = datosrecividos.nrotramite;
-        const dat = { nombre: nombreDocumento, nrotramite: nt, tabla: 'certificado_conclusion', flujo: datosrecividos.flujo };
-        const response = await documentService.recuperarDocumentos(dat);
-        const archivoBlob = new Blob([response.data], { type: response.headers['content-type'] });
-        const archivoURL = URL.createObjectURL(archivoBlob);
-        window.open(archivoURL, '_blank');
-    } catch {
-        alert('Descargue el documento antes porfavor')
-    }
-
-}
-
-async function firmarDocumento(documento) {
-
-}
-
 
 function redireccionar(url) {
     router.replace(url)
+}
+
+async function generarHojaDeRuta() {
+    const nt = datosrecividos.nrotramite;
+    const r = datosrecividos.rol;
+    const f = datosrecividos.formulario;
+    const obs = com.value;
+    const datosFormateados = { nrotramite: nt, rol: r, ref: f, obs: '  - ' + obs };
+
+    loadingModal.value = true;
+    try {
+        await editDocumentService.editarDocumento(datosFormateados);
+        redireccionar("/hoja-ruta");
+    } catch (error) {
+        alert('Error al generar la hoja de ruta', error);
+        redireccionar("/tramite-pendiente");
+    } finally {
+        loadingModal.value = false;
+    }
+}
+
+function cambiarData() {
+    let data = localStorage.getItem('data');
+    if (data) {
+        data = JSON.parse(data);
+        data.estado = 'pendiente';
+        data.proceso = 'P3';
+        data.observaciones = '';
+        const updatedData = JSON.stringify(data);
+        localStorage.setItem('data', updatedData);
+    } else {
+        console.log('No se encontró el objeto en localStorage.');
+    }
 }
 </script>

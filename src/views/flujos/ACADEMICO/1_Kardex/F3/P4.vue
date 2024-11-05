@@ -1,5 +1,7 @@
 <template>
     <AppTopbar></AppTopbar>
+    <Toast />
+    <ConfirmDialog />
     <br>
     <div class="layout-main-container">
         <div style="width: 80%;">
@@ -8,57 +10,13 @@
                 <AppDatos :active="true" :titulo="'SOLICITUD DE CONVALIDACION DE MATERIAS DE PLAN A PLAN'"></AppDatos>
 
                 <ListaArchivos :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
-                    :mostrarObservacionesProp="true" :tabla="'convalidacion_01'" />
+                    :mostrarObservacionesProp="true" :tabla="'convalidacion_01'"
+                    :nom-division="'DOCUMENTOS DEL ESTUDIANTE'" />
                 <br><br>
             </div>
 
             <div class="card">
-                <div v-if="swob">
-                    <h5>
-                        <span style="color: blue;">OBSERVACION: </span>
-                        <span :style="{ color: 'red', textTransform: 'uppercase' }">{{ obs }}</span>
-                    </h5>
-                    <h6 :style="{ color: 'blue', textTransform: 'uppercase' }">Realice las correcciones al documento de
-                        convalidacion</h6>
-                </div>
-                <h5>GENERAR EL INFORME DE CONVALIDACION</h5>
-                <div v-if="loading" class="loading-icon">
-                    <i class="pi pi-spin pi-spinner"></i> Cargando...
-                </div> <br>
-                <div class="flex justify-content-left flex-wrap gap-3">
-                    <Button @click="uploadDocument" :disabled="uploadDone" severity="success">
-                        <i class="pi pi-book"> Crear Documento</i>
-                    </Button>
-                    <Button v-if="uploadDone" :disabled="!swdoc" @click="redirectDocument" severity="info">
-                        <i class="pi pi-link"> Editar Documento</i>
-                    </Button>
-                    <Button v-if="uploadDone" :disabled="!swdoc" @click="downloadDocument" severity="info">
-                        <i class="pi pi-download"> Descargar Documento</i>
-                    </Button>
-                </div>
-                <br><br>
-                <div v-if="uploadDone">
-                    <DataTable :value="documentos" :paginator="false">
-                        <Column header="DOCUMENTO">
-                            <template #body="{ data }">
-                                {{ data.archivo }}
-                            </template>
-                        </Column>
-                        <Column header="ENLACES">
-                            <template #body="{ data }">
-                                <a :href="data.url" @click.prevent="cargarDocumento(data.tipo)">
-                                    <i class="pi pi-link"> Ver Documento</i>
-                                </a>
-                            </template>
-                        </Column>
-                        <Column v-if="swdoc" header="FIRMAR">
-                            <template #body="{ data }">
-                                <Button @click="firmarDocumento(data)" severity="info"><i class="pi pi-pencil">
-                                        Firmar</i></Button>
-                            </template>
-                        </Column>
-                    </DataTable>
-                </div>
+                <GenerarDocument ref="docRef" :documentos="documentos"></GenerarDocument>
                 <br><br>
                 <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
                     <Button @click="redireccionar('/tramite-concluido')" severity="warning"><i
@@ -67,164 +25,102 @@
                 <div v-else class="flex justify-content-left flex-wrap gap-3">
                     <Button @click="redireccionar('/tramite-pendiente')" severity="warning"><i
                             class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
-                    <Button @click="enviarTramite()" :disabled="!uploadDone"><i
-                            class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
+                    <Button @click="enviarTramite()"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
                 </div>
             </div>
-            <!-- {{ datosrecividos }} -->
         </div>
     </div>
+    <!-- Modal de Carga -->
+    <Dialog v-model:visible="loadingModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
+        header="Cargando datos">
+        <div class="flex align-items-center justify-content-center">
+            <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
+                animationDuration=".5s" />
+            <span class="ml-3">Enviando, espere porfavor...</span>
+        </div>
+    </Dialog>
     <AppFooter></AppFooter>
 </template>
 
 <script setup>
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
-import { createApp, ref, computed, onMounted } from 'vue';
+import { ref } from 'vue';
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
 import AppDatos from './Components/Datos.vue';
 import ListaArchivos from './Components/ListaArchivos.vue'
 import workflowService from '@/services/workflow.service';
-import convalidacion01Service from '@/services/convalidacion01.service'
-import documentService from '@/services/document.service';
-import { handleUpload, handleUrl, handleDownload } from './Components/driveServiceConvalidacion01'
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+import GenerarDocument from './Components/GenerarDocumentos.vue';
+import editDocumentService from '@/services/editDocument.service';
+const confirm = useConfirm();
+const toast = useToast();
 
+const loadingModal = ref(false);
 const router = useRouter()
 const store = useStore()
 const datosrecividos = store.getters.getData
 const swdoc = !datosrecividos.fechafin
-const uploadDone = ref(false);
 const urlDoc = ref()
-const loading = ref(false)
-const docDrive = ref('INFORME CONVALIDACION.docx')
-const swob = datosrecividos.observaciones
-const obs = ref("")
 
-const documentos = [{ archivo: '1. Informe de convalidacion', url: urlDoc, tipo: 'informe_convalidacion' }]
+const documentos = [
+    { nombre: '1. Informe de convalidacion', archivo: 'F3 D1 INFORME CONVALIDACION.docx', value: 'informe_convalidacion', url: '' }
+]
 
 const valueArchivos = ["nota_director", "cedula_identidad", "record_academico"];
 const nomArchivos = ["1. Nota dirigida al Director", "2. Cedula de Identidad", "3. Record Academico"];
 
-
-onMounted(async () => {
-    const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'c_informe_convalidacion' };
-    try {
-        const res = await convalidacion01Service.obtenerColumna(dat);
-        if (res.data != '') {
-            uploadDone.value = true
-            getDocumentUrl();
-        }
-    } catch (error) {
-        console.error(error);
-    }
-});
-
-onMounted(async () => {
-    if (obs) {
-        const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'r_informe_convalidacion' };
-        try {
-            const res = await convalidacion01Service.obtenerColumna(dat);
-            obs.value = res.data
-        } catch (error) {
-            console.error(error);
-        }
-    }
-});
-
-
 async function enviarTramite() {
-    const confirmed = confirm('¿Esta seguro de enviar estos datos?');
-    if (confirmed) {
-        const a = datosrecividos.nrotramite
-        const b = datosrecividos.flujo
-        const c = datosrecividos.proceso
+    confirm.require({
+        message: 'Está seguro de enviar estos datos',
+        header: 'Confirmación',
+        icon: 'pi pi-question-circle',
+        accept: async () => {
+            try {
+                const a = datosrecividos.nrotramite
+                const b = datosrecividos.flujo
+                const c = datosrecividos.proceso
 
 
-        try {
-            const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' }
+                try {
+                    const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' }
 
-            await workflowService.siguienteproceso(env)
+                    const response = await workflowService.siguienteproceso(env);
+                    if (response) {
+                        await generarHojaDeRuta();
+                    }
 
-        } catch (error) {
-            alert(error);
+                } catch (error) {
+                    alert(error);
+                }
+
+                redireccionar("/tramite-pendiente");
+            } catch (error) {
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
+            }
         }
-
-        router.push("/tramite-concluido");
-    } else {
-        // El usuario canceló
-    }
-
+    });
 }
 
-async function uploadDocument() {
-    loading.value = true
+async function generarHojaDeRuta() {
+    const nt = datosrecividos.nrotramite;
+    const r = datosrecividos.rol;
+    const f = datosrecividos.formulario;
+    const datosFormateados = { nrotramite: nt, rol: r, ref: f, obs: '' };
+
+    loadingModal.value = true;
     try {
-        const message = await handleUpload(docDrive.value, datosrecividos.nrotramite, 'c_informe_convalidacion');
-        alert(message);
-        uploadDone.value = true;
-        if (uploadDone.value) {
-            getDocumentUrl();
-        }
+        await editDocumentService.editarDocumento(datosFormateados);
+        redireccionar("/hoja-ruta");
+    } catch (error) {
+        alert('Error al generar la hoja de ruta', error);
+        redireccionar("/tramite-pendiente");
     } finally {
-        loading.value = false
-    }
-
-}
-
-async function getDocumentUrl() {
-    loading.value = true
-    try {
-        urlDoc.value = await handleUrl(datosrecividos.nrotramite, 'c_informe_convalidacion');
-    } finally {
-        loading.value = false
+        loadingModal.value = false;
     }
 }
-
-
-async function downloadDocument() {
-    loading.value = true
-    try {
-        const message = await handleDownload(datosrecividos.nrotramite, 'c_informe_convalidacion', 'informe_convalidacion', datosrecividos.flujo, 'convalidacion_01');
-        alert(message);
-    } finally {
-        loading.value = false
-    }
-
-}
-
-function redirectDocument() {
-    loading.value = true
-    try {
-        if (!urlDoc.value) {
-            console.error("URL no está definida");
-            return;
-        }
-        window.open(urlDoc.value, '_blank');
-    } finally {
-        loading.value = false
-    }
-
-}
-
-async function cargarDocumento(nombreDocumento) {
-    try {
-        const nt = datosrecividos.nrotramite;
-        const dat = { nombre: nombreDocumento, nrotramite: nt, tabla: 'convalidacion_01', flujo: datosrecividos.flujo };
-        const response = await documentService.recuperarDocumentos(dat);
-        const archivoBlob = new Blob([response.data], { type: response.headers['content-type'] });
-        const archivoURL = URL.createObjectURL(archivoBlob);
-        window.open(archivoURL, '_blank');
-    } catch {
-        alert('Descargue el documento antes porfavor')
-    }
-
-}
-
-async function firmarDocumento(documento) {
-
-}
-
 
 function redireccionar(url) {
     router.replace(url)
