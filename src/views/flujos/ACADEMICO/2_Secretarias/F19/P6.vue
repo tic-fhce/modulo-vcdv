@@ -108,7 +108,7 @@ const titulo = ref()
 const tutor = ref()
 
 const documentos = [
-    { nombre: '1. Resolucion de Perfil de Grado', archivo: 'F17 D3 RESOLUCION PERFIL DE GRADO.docx', value: 'resolucion_perfil', url: '' }
+    { nombre: '1. Resolucion de Perfil de Grado', archivo: 'F19 D3 RESOLUCION PERFIL DE GRADO.docx', value: 'resolucion_perfil', url: '' }
 ];
 
 const nomArchivos = ref([

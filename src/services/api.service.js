@@ -20,7 +20,7 @@ export function Api() {
     (error) => {
       if (error.response && error.response.status === 401) {
         localStorage.removeItem("access_token");
-        window.location.href = "/"; // Redirect to login on 401
+        //window.location.href = "/"; // Redirect to login on 401
       }
       return Promise.reject(error);
     }

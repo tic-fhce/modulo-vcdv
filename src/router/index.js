@@ -271,7 +271,11 @@ const router = createRouter({
         { path: 'P6', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F7/P6.vue') },
         { path: 'P7', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F7/P7.vue') },
         { path: 'P8', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F7/P8.vue') },
-        { path: 'P9-Fin', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F7/P9-Fin.vue') },
+        { path: 'P9', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F7/P9.vue') },
+        { path: 'P10', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F7/P10.vue') },
+        { path: 'P11', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F7/P11.vue') },
+        { path: 'P12-Fin', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F7/P12-Fin.vue') },
+        { path: 'P13', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F7/P13.vue') },
       ]
     },
     {
@@ -297,6 +301,41 @@ const router = createRouter({
         { path: 'P4', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F9/P4.vue') },
         { path: 'P5', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F9/P5.vue') },
         { path: 'P6-Fin', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F9/P6-Fin.vue') },
+      ]
+    },
+    {
+      path: '/F12',
+      //meta: {requireAuth: true},
+      children: [
+        { path: 'P1', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F12/P1.vue') },
+        { path: 'P2', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F12/P2.vue') },
+        { path: 'P3', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F12/P3.vue') },
+        { path: 'P4', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F12/P4.vue') },
+        { path: 'P5', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F12/P5.vue') },
+        { path: 'P6', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F12/P6.vue') },
+        { path: 'P7', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F12/P7.vue') },
+        { path: 'P8', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F12/P8.vue') },
+        { path: 'P9', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F12/P9.vue') },
+        { path: 'P10', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F12/P10.vue') },
+        { path: 'P11', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F12/P11.vue') },
+        { path: 'P12-Fin', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F12/P12-Fin.vue') },
+        { path: 'P13', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F12/P13.vue') },
+      ]
+    },
+    {
+      path: '/F14',
+      //meta: {requireAuth: true},
+      children: [
+        { path: 'P1', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F14/P1.vue') },
+        { path: 'P2', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F14/P2.vue') },
+        { path: 'P3', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F14/P3.vue') },
+        { path: 'P4', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F14/P4.vue') },
+        { path: 'P5', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F14/P5.vue') },
+        { path: 'P6', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F14/P6.vue') },
+        { path: 'P7', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F14/P7.vue') },
+        { path: 'P8', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F14/P8.vue') },
+        { path: 'P9', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F14/P9.vue') },
+        { path: 'P10-Fin', component: () => import('@/views/flujos/ACADEMICO/2_Secretarias/F14/P10-Fin.vue') },
       ]
     },
     {

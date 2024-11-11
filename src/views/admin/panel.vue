@@ -113,10 +113,10 @@ const chartData = ref({});
 const chartOptions = ref({});
 
 onMounted(() => {
-    obtenerDatosIniciales();
-    obtenerEstadisticasFlujo();
-    obtenerTramitesEstado();
-    aplicarTema();
+    // obtenerDatosIniciales();
+    // obtenerEstadisticasFlujo();
+    // obtenerTramitesEstado();
+    // aplicarTema();
 });
 
 // Función para obtener los datos de las tarjetas iniciales

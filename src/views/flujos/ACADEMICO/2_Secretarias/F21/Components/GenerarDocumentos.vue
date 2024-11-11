@@ -1,6 +1,6 @@
 <template>
     <Toast />
-    <h5>GENERAR CERTIFICADO Y LLENAR</h5>
+    <h5>GENERAR DOCUMENTOS</h5>
     <div v-if="loading" class="loading-icon" style="color: red;">
         <i class="pi pi-spin pi-spinner"></i> Espere un momento por favor...
     </div> <br>
@@ -133,13 +133,13 @@
 <script setup>
 import { useStore } from 'vuex';
 import { ref, watch, onMounted } from 'vue';
-import { handleUpload, handleUrl, handleDownload } from './driveServiceCambio';
+import { handleUpload, handleUrl, handleDownload } from './driveServicePerfil';
 import documentService from '@/services/document.service';
-import cambioModalidadService from '@/services/cambioModalidad.service';
+import aprobacionPerfilService from '@/services/aprobacionPerfil.service';
 import { listarTokens, listarCertificados, firmarDocumentosApi, validarDocumento } from '@/views/flujos/ACADEMICO/jacobitusService';
 import { useToast } from 'primevue/usetoast';
 
-const tablaBD = "cambio_modalidad";
+const tablaBD = "aprobacion_perfil";
 const toast = useToast();
 const store = useStore()
 const datosrecividos = store.getters.getData
@@ -181,7 +181,7 @@ onMounted(async () => {
     try {
         for (const doc of localDocumentos.value) {
             const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'c_' + doc.value };
-            const res = await cambioModalidadService.obtenerColumna(dat);
+            const res = await aprobacionPerfilService.obtenerColumna(dat);
             if (res.data != '') {
                 upC++;
             }
@@ -201,7 +201,7 @@ async function verificarFirmadoBD() {
         // Iterar sobre cada documento y verificar su estado de firma en la base de datos
         for (const doc of localDocumentos.value) {
             const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'f_' + doc.value };
-            const res = await cambioModalidadService.obtenerColumna(dat);
+            const res = await aprobacionPerfilService.obtenerColumna(dat);
 
             // Almacenar el estado de firma en el documento
             doc.firmado = res.data === 'true' || res.data === true;
@@ -261,7 +261,7 @@ async function downloadDocument(data) {
     loading.value = true;
     try {
         const datAct = { 'colum': 'f_' + data.value, 'param': 'false', 'nrotramite': datosrecividos.nrotramite }
-        await cambioModalidadService.actulizarColumna(datAct);
+        await aprobacionPerfilService.actulizarColumna(datAct);
 
         const mensaje = await handleDownload(datosrecividos.nrotramite, 'c_' + data.value, data.value, datosrecividos.flujo, tablaBD);
         toast.add({ severity: 'success', summary: 'Éxito', detail: mensaje, life: 5000 });
@@ -421,7 +421,7 @@ async function firmar() {
 
             // Actualizar la firma del documento en la base de datos
             const datAct = { 'colum': 'f_' + nombreDocumento, 'param': 'true', 'nrotramite': datosrecividos.nrotramite }
-            await cambioModalidadService.actulizarColumna(datAct);
+            await aprobacionPerfilService.actulizarColumna(datAct);
 
             // Convertir el base64 a Blob
             const archivoBlob = base64ToBlob(base64Pdf, 'application/pdf');

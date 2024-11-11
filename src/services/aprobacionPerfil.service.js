@@ -7,6 +7,9 @@ export default {
     obtenerAprobacionPerfil(nrotramite){
         return Api().post("/aprobacionPerfil/obtenerAP", nrotramite)
     },
+    obtenerUltimaAprobacionPerfil(){
+        return Api().post("/aprobacionPerfil/obtenerUAP")
+    },
     actulizarColumna(datos){
         return Api().patch("/aprobacionPerfil/actualizar", datos)
     },

@@ -105,8 +105,8 @@ const titulo = ref()
 const tutor = ref()
 
 const documentos = [
-    { nombre: '1. Proyecto de Resolucion de Perfil de Grado', archivo: 'F17 D1 PROYECTO RESOLUCION PERFIL DE GRADO.docx', value: 'proyecto_resolucion_perfil', url: '' },
-    { nombre: '2. Solicitud de aprobacion de Proyecto de Resolucion', archivo: 'F17 D2 SOLICITUD APROBACION PERFIL DE GRADO.docx', value: 'solicitud_aprobacion_perfil', url: '' }
+    { nombre: '1. Proyecto de Resolucion de Perfil de Grado', archivo: 'F19 D1 PROYECTO RESOLUCION PERFIL DE GRADO.docx', value: 'proyecto_resolucion_perfil', url: '' },
+    { nombre: '2. Solicitud de aprobacion de Proyecto de Resolucion', archivo: 'F19 D2 SOLICITUD APROBACION PERFIL DE GRADO.docx', value: 'solicitud_aprobacion_perfil', url: '' }
 ];
 
 const nomArchivos = ref([

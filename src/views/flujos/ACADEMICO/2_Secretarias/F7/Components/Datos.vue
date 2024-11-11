@@ -2,7 +2,7 @@
     <div class="col-12 text-center mt-1 mb-1">
         <h4>{{ titulo }}</h4>
     </div>
-    <div class="card" style="background-color: rgb(238, 249, 247);">
+    <!-- <div class="card" style="background-color: rgb(238, 249, 247);">
         <h5 style="text-decoration: underline;">DATOS DEL ESTUDIANTE</h5>
         <div class="grid justify-content-center p-fluid mt-3">
             <div class="field col-12 md:col-6">
@@ -28,7 +28,7 @@
                 </span>
             </div>
         </div>
-    </div>
+    </div> -->
 </template>
 
 <script setup>

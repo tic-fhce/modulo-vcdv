@@ -1,6 +1,6 @@
 <template>
     <Toast />
-    <h5>GENERAR CERTIFICADO Y LLENAR</h5>
+    <h5>GENERAR DOCUMENTOS</h5>
     <div v-if="loading" class="loading-icon" style="color: red;">
         <i class="pi pi-spin pi-spinner"></i> Espere un momento por favor...
     </div> <br>

@@ -1,11 +1,11 @@
-import convocatoriaService from '@/services/convocatoria.service';
+import aprobacionPerfilService from '@/services/aprobacionPerfil.service';
 import { uploadFile, share, download } from '../../../googleDrive'
 
 export async function handleUpload(nomdoc, nrotramite, colum) {
   try {
     const fileId = await uploadFile(nomdoc, nrotramite);
     const dat = { 'colum': colum, 'param': fileId, 'nrotramite': nrotramite }
-    await convocatoriaService.actulizarColumna(dat);
+    await aprobacionPerfilService.actulizarColumna(dat);
     return 'Carga de documento correcta a Google Drive'
   } catch (error) {
     return 'Error al subir archivo: ' + error.message;
@@ -15,7 +15,7 @@ export async function handleUpload(nomdoc, nrotramite, colum) {
 export async function handleUrl(nrotramite, colum){
     try{
         const dat = { 'nrotramite': nrotramite, 'columna': colum };
-        const cod = await convocatoriaService.obtenerColumna(dat);
+        const cod = await aprobacionPerfilService.obtenerColumna(dat);
         const res = await share(cod);
         return res.webViewLink
     } catch (error) {
@@ -26,8 +26,7 @@ export async function handleUrl(nrotramite, colum){
 export async function handleDownload(nrotramite, colum, nomdoc, flujo, tabla){
     try{
         const dat = { 'nrotramite': nrotramite, 'columna': colum };
-        const cod = await convocatoriaService.obtenerColumna(dat);
-        console.log(cod)
+        const cod = await aprobacionPerfilService.obtenerColumna(dat);
         const res = await download(cod, nomdoc, nrotramite, flujo, tabla);
         return "Descarga de documento correcta"
     } catch (error) {

@@ -181,12 +181,7 @@ async function DatosPerfilGrado() {
             tutor.value = data.aprobacion_Perfil.tutor;
         }
     } catch (error) {
-        toast.add({
-            severity: 'error',
-            summary: 'Error',
-            detail: 'No se pudo obtener los datos del perfil de grado.',
-            life: 3000
-        });
+        toast.add({severity: 'error', summary: 'Error', detail: 'No se pudo obtener los datos del perfil de grado.', life: 3000});
     }
 }
 

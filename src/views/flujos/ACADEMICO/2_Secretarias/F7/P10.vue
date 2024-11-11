@@ -6,14 +6,22 @@
     <div class="layout-main-container">
         <div style="width: 80%;">
             <div class="card">
-                <AppDatos :titulo="'CONVOCATORIA DE AUXILIARES DE DOCENCIA'"></AppDatos>
-                
-                <ListaArchivos :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
-                    :mostrarObservacionesProp="true" :nomDivision="'DOCUMENTOS'" :mostrar-v-firma="true" :tabla="'conv_aux_docencia'" />
+                <AppDatos :titulo="'CONVOCATORIA PARA DOCENTES INTERINOS'"></AppDatos>
+                <div class="card">
+                    <h5 style="text-decoration: underline;">CONVOCATORIA</h5>
+                    <div class="field grid">
+                        <div class="col-12 mb-2 lg:col-12 lg:mb-0">
+                            <h5 style="color: blue;">{{ tipo }}</h5>
+                        </div>
+                    </div>
+                </div>
+                <ListaArchivos :valueArchivos="valueArchivos" :nomArchivos="nomArchivos" :mostrar-v-firma="true"
+                    :nomDivision="'DOCUMENTOS'" :tabla="'conv_doc_interinos'" />
                 <br><br>
 
-                <ListaArchivos :valueArchivos="valueArchivos2" :nomArchivos="nomArchivos2"
-                    :mostrarFirmarDoc="true" :mostrarVFirma="true" :nomDivision="'ATENCIÓN AL TRÁMITE'" :tabla="'conv_aux_docencia'" />
+                <h6 style="color: blue;">FIRMAR LA CONVOCATORIA PARA SU PUBLICACIÓN</h6>
+                <ListaArchivos :valueArchivos="valueArchivos2" :nomArchivos="nomArchivos2" :mostrarFirmarDoc="true"
+                    :mostrarVFirma="true" :nomDivision="'CONVOCATORIA'" :mostrar-observaciones-prop="true" :tabla="'conv_doc_interinos'" />
                 <br><br>
 
                 <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
@@ -54,6 +62,7 @@ import workflowService from '@/services/workflow.service';
 import editDocumentService from '@/services/editDocument.service';
 import { useConfirm } from 'primevue/useconfirm';
 import { useToast } from 'primevue/usetoast';
+import convocatoriaService from '@/services/convDocInterinos.service';
 
 const confirm = useConfirm();
 const toast = useToast();
@@ -63,11 +72,24 @@ const loadingModal = ref(false);
 const datosrecividos = store.getters.getData;
 const swdoc = !datosrecividos.fechafin;
 
-const nomArchivos = ref(['1. Convocatoria Auxiliar de Docencia', '2. Certificacion de carga horaria']);
-const valueArchivos = ref(["convocatoria", "certificacion_carga_horaria"]);
+const nomArchivos = ref(['1. Certificacion de carga horaria', '2. Nota de atención']);
+const valueArchivos = ref(["certificacion_carga_horaria", "nota_atencion"]);
 
-const nomArchivos2 = ref(['1. Nota de atención']);
-const valueArchivos2 = ref(["nota_atencion"]);
+const nomArchivos2 = ref(['1. Convocatoria concurso de meritos']);
+const valueArchivos2 = ref(["convocatoria"]);
+
+const tipo = ref()
+
+onMounted(async () => {
+    verDatosConvocatoria();
+});
+
+async function verDatosConvocatoria() {
+    const { data } = await convocatoriaService.obtenerConvocatoria({ 'nrotramite': datosrecividos.nrotramite })
+    if (data) {
+        tipo.value = data.tipo;
+    }
+}
 
 async function enviarTramite() {
     confirm.require({

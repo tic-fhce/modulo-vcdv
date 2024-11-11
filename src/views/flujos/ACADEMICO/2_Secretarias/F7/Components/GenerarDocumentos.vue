@@ -1,6 +1,6 @@
 <template>
     <Toast />
-    <h5>GENERAR CERTIFICADO Y LLENAR</h5>
+    <h5>GENERAR DOCUMENTOS</h5>
     <div v-if="loading" class="loading-icon" style="color: red;">
         <i class="pi pi-spin pi-spinner"></i> Espere un momento por favor...
     </div> <br>
@@ -14,7 +14,7 @@
     </div>
     <br><br>
     <div v-if="uploadDone">
-        <DataTable :value="localDocumentos" :paginator="false">
+        <DataTable :value="documentosActivos" :paginator="false">
             <Column header="NOMBRE">
                 <template #body="{ data }">
                     {{ data.nombre }}
@@ -132,16 +132,17 @@
 
 <script setup>
 import { useStore } from 'vuex';
-import { ref, watch, onMounted } from 'vue';
-import { handleUpload, handleUrl, handleDownload } from './driveServiceCertificadoConclusion';
+import { ref, watch, onMounted, computed, defineProps, defineEmits } from 'vue';
+import { handleUpload, handleUrl, handleDownload } from './driveServiceConvDocInterinos';
 import documentService from '@/services/document.service';
-import certificadoConclusionService from '@/services/certificadoConclusion.service';
+import convDocInterinosService from '@/services/convDocInterinos.service';
 import { listarTokens, listarCertificados, firmarDocumentosApi, validarDocumento } from '@/views/flujos/ACADEMICO/jacobitusService';
 import { useToast } from 'primevue/usetoast';
 
-const tablaBD = "certificado_conclusion";
+const tablaBD = "conv_doc_interinos";
 const toast = useToast();
 const store = useStore()
+const emit = defineEmits(['documentsUploaded']); // Declara el evento aquí
 const datosrecividos = store.getters.getData
 
 const loading = ref(false);
@@ -164,10 +165,16 @@ const firmaSeleccionada = ref(null);
 
 const props = defineProps({
     documentos: Array,
-    swdoc: Boolean
+    swdoc: Boolean,
+    swCrearConv: Boolean,
 });
 
+const swCrearConv = ref(props.swCrearConv)
 const localDocumentos = ref([...props.documentos]);
+
+const documentosActivos = computed(() => {
+    return localDocumentos.value.filter(doc => doc.activo);
+});
 
 watch(() => props.documentos, (newDocs) => {
     localDocumentos.value = [...newDocs];
@@ -181,7 +188,7 @@ onMounted(async () => {
     try {
         for (const doc of localDocumentos.value) {
             const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'c_' + doc.value };
-            const res = await certificadoConclusionService.obtenerColumna(dat);
+            const res = await convDocInterinosService.obtenerColumna(dat);
             if (res.data != '') {
                 upC++;
             }
@@ -192,7 +199,7 @@ onMounted(async () => {
             await getDocumentUrls();
         }
     } catch (error) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'Sin documentos para editar.', life: 5000 });
+        toast.add({ severity: 'info', summary: 'Información', detail: 'Sin documentos para editar.', life: 3000 });
     }
 });
 
@@ -201,13 +208,13 @@ async function verificarFirmadoBD() {
         // Iterar sobre cada documento y verificar su estado de firma en la base de datos
         for (const doc of localDocumentos.value) {
             const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'f_' + doc.value };
-            const res = await certificadoConclusionService.obtenerColumna(dat);
+            const res = await convDocInterinosService.obtenerColumna(dat);
 
             // Almacenar el estado de firma en el documento
             doc.firmado = res.data === 'true' || res.data === true;
         }
     } catch (error) {
-        toast.add({ severity: 'error', summary: 'Error', detail: 'No se obtuvieron datos correctamente.', life: 5000 });
+        toast.add({ severity: 'info', summary: 'Información', detail: 'No existen documentos para firmar.', life: 2500 });
     }
 }
 
@@ -219,6 +226,15 @@ onMounted(() => {
 
 async function uploadDocuments() {
     loading.value = true;
+
+    if (swCrearConv.value) {
+        try{
+            let datos = { 'nrotramite': datosrecividos.nrotramite, 'tipo': localDocumentos.value[0].tipo }
+            await convDocInterinosService.crearConvocatoria(datos);
+        } catch {
+            return null;
+        }
+    }
 
     const totalDocuments = localDocumentos.value.length;
     let uploadedCount = 0;
@@ -235,6 +251,8 @@ async function uploadDocuments() {
             toast.add({ severity: 'success', summary: 'Éxito', detail: 'Documentos cargados correctamente', life: 5000 });
             uploadDone.value = true;
             await getDocumentUrls();
+
+            emit('documents-uploaded');
         }
     } finally {
         loading.value = false;
@@ -261,7 +279,7 @@ async function downloadDocument(data) {
     loading.value = true;
     try {
         const datAct = { 'colum': 'f_' + data.value, 'param': 'false', 'nrotramite': datosrecividos.nrotramite }
-        await certificadoConclusionService.actulizarColumna(datAct);
+        await convDocInterinosService.actulizarColumna(datAct);
 
         const mensaje = await handleDownload(datosrecividos.nrotramite, 'c_' + data.value, data.value, datosrecividos.flujo, tablaBD);
         toast.add({ severity: 'success', summary: 'Éxito', detail: mensaje, life: 5000 });
@@ -421,7 +439,7 @@ async function firmar() {
 
             // Actualizar la firma del documento en la base de datos
             const datAct = { 'colum': 'f_' + nombreDocumento, 'param': 'true', 'nrotramite': datosrecividos.nrotramite }
-            await certificadoConclusionService.actulizarColumna(datAct);
+            await convDocInterinosService.actulizarColumna(datAct);
 
             // Convertir el base64 a Blob
             const archivoBlob = base64ToBlob(base64Pdf, 'application/pdf');

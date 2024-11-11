@@ -7,21 +7,15 @@
         <div style="width: 80%;">
             <div class="card">
 
-                <AppDatos :active="true" :titulo="'CONVOCATORIA PARA DOCENTES INTERINOS'"></AppDatos>
-                <div class="card">
-                    <h5 style="text-decoration: underline;">CONVOCATORIA</h5>
-                    <div class="field grid">
-                        <div class="col-12 mb-2 lg:col-12 lg:mb-0">
-                            <h5 style="color: blue;">{{ tipo }}</h5>
-                        </div>
-                    </div>
-                </div>
+                <AppDatos :active="true" :titulo="'CONVOCATORIA DE DOCENTES CONTRATADOS'"></AppDatos>
+               
                 <ListaArchivos ref="valRef" :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
-                    :mostrarObservacionesProp="true" :mostrarRevision="true" :nomDivision="'DOCUMENTOS'" :tabla="'conv_doc_interinos'" />
+                    :mostrarObservacionesProp="true" :mostrarRevision="true" :mostrarVFirma="true" :nomDivision="'DOCUMENTOS'"
+                    :tabla="'conv_doc_contratados'" />
                 <br><br>
 
                 <ListaArchivos :valueArchivos="valueArchivos2" :nomArchivos="nomArchivos2"
-                    :mostrarFirmarDoc="true" :mostrarVFirma="true" :nomDivision="'ATENCIÓN AL TRÁMITE'" :tabla="'conv_doc_interinos'" />
+                    :mostrarVFirma="true" :nomDivision="'ATENCIÓN AL TRÁMITE'" :tabla="'conv_doc_contratados'" />
                 <br><br>
 
                 <div>
@@ -64,7 +58,6 @@ import editDocumentService from '@/services/editDocument.service';
 import ListaArchivos from './Components/ListaArchivos.vue'
 import workflowService from '@/services/workflow.service';
 import documentService from '@/services/document.service';
-import convocatoriaService from '@/services/convDocInterinos.service';
 
 const router = useRouter()
 const store = useStore()
@@ -79,24 +72,16 @@ const comentario = ref('')
 const cond = ref('si')
 const valRef = ref(null)
 
-const nomArchivos = ref(['1. Convocatoria concurso de meritos', '2. Certificacion de carga horaria']);
-const valueArchivos = ref(["convocatoria", "certificacion_carga_horaria"]);
+const nomArchivos = ref(['1. Convocatoria concurso de meritos', ]);
+const valueArchivos = ref(["convocatoria"]);
 
-const nomArchivos2 = ref(['1. Nota de atención']);
-const valueArchivos2 = ref(["nota_atencion"]);
-
-const tipo = ref()
+const nomArchivos2 = ref(['1. Certificacion de carga horaria', '2. Nota de atención']);
+const valueArchivos2 = ref(["certificacion_carga_horaria", "nota_atencion"]);
 
 onMounted(async () => {
-    verDatosConvocatoria();
+    const dat = { columna: 'convocatoria', observacion: null, nrotramite: datosrecividos.nrotramite, tabla: 'conv_doc_contratados' };
+    await documentService.actualizarobservacionDocumentos(dat);
 });
-
-async function verDatosConvocatoria() {
-    const { data } = await convocatoriaService.obtenerConvocatoria({ 'nrotramite': datosrecividos.nrotramite })
-    if (data) {
-        tipo.value = data.tipo;
-    }
-}
 
 async function enviarTramite() {
     if (valRef.value.validarRadioButtons()) {
@@ -125,7 +110,7 @@ async function enviarTramite() {
                             } else {
                                 obs = err;
                             }
-                            const dat = { columna: valueArchivos.value[index], observacion: obs, nrotramite: nt, tabla: 'conv_doc_interinos' };
+                            const dat = { columna: valueArchivos.value[index], observacion: obs, nrotramite: nt, tabla: 'conv_doc_contratados' };
                             await documentService.actualizarobservacionDocumentos(dat);
 
                             await enviarSolicitud(index + 1);

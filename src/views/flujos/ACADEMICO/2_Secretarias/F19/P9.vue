@@ -1,4 +1,6 @@
 <template>
+    <Toast />
+    <ConfirmDialog />
     <AppTopbar></AppTopbar>
     <br>
     <div class="layout-main-container">
@@ -108,7 +110,11 @@ import workflowService from '@/services/workflow.service';
 import aprobacionPerfilService from '@/services/aprobacionPerfil.service';
 import documentService from '@/services/document.service';
 import editDocumentService from '@/services/editDocument.service';
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
 
+const confirm = useConfirm();
+const toast = useToast();
 // Variables reactivas
 const router = useRouter();
 const store = useStore();
@@ -178,12 +184,20 @@ function corregir() {
 
 async function enviarTramite() {
     if (imagenesSeleccionadas.value.every(img => img.value !== null)) {
-        const confirmed = confirm('¿Está seguro de enviar estos datos?');
-        if (confirmed) {
-            await procesarEnvio();
-        }
+        confirm.require({
+            message: 'Está seguro de enviar estos datos',
+            header: 'Confirmación',
+            icon: 'pi pi-question-circle',
+            accept: async () => {
+                try {
+                    await procesarEnvio();
+                } catch (error) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
+                }
+            }
+        });
     } else {
-        alert('Cargue los documentos requeridos porfavor');
+        toast.add({ severity: 'error', summary: 'Error', detail: 'Cargue los documentos requeridos porfavor', life: 3000 });
     }
 }
 

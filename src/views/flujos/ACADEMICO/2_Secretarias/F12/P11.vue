@@ -6,14 +6,15 @@
     <div class="layout-main-container">
         <div style="width: 80%;">
             <div class="card">
-                <AppDatos :titulo="'CONVOCATORIA DE AUXILIARES DE DOCENCIA'"></AppDatos>
+                <AppDatos :titulo="'CONVOCATORIA DE DOCENTES CONTRATADOS'"></AppDatos>
                 
-                <ListaArchivos :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
-                    :mostrarObservacionesProp="true" :nomDivision="'DOCUMENTOS'" :mostrar-v-firma="true" :tabla="'conv_aux_docencia'" />
+                <ListaArchivos :valueArchivos="valueArchivos" :nomArchivos="nomArchivos" :mostrar-v-firma="true"
+                    :nomDivision="'DOCUMENTOS'" :tabla="'conv_doc_contratados'" />
                 <br><br>
 
-                <ListaArchivos :valueArchivos="valueArchivos2" :nomArchivos="nomArchivos2"
-                    :mostrarFirmarDoc="true" :mostrarVFirma="true" :nomDivision="'ATENCIÓN AL TRÁMITE'" :tabla="'conv_aux_docencia'" />
+                <h6 style="color: blue;">FIRMAR LA CONVOCATORIA PARA SU PUBLICACIÓN</h6>
+                <ListaArchivos :valueArchivos="valueArchivos2" :nomArchivos="nomArchivos2" :mostrarFirmarDoc="true"
+                    :mostrarVFirma="true" :nomDivision="'CONVOCATORIA'" :mostrar-observaciones-prop="true" :tabla="'conv_doc_contratados'" />
                 <br><br>
 
                 <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
@@ -63,11 +64,11 @@ const loadingModal = ref(false);
 const datosrecividos = store.getters.getData;
 const swdoc = !datosrecividos.fechafin;
 
-const nomArchivos = ref(['1. Convocatoria Auxiliar de Docencia', '2. Certificacion de carga horaria']);
-const valueArchivos = ref(["convocatoria", "certificacion_carga_horaria"]);
+const nomArchivos = ref(['1. Certificacion de carga horaria', '2. Nota de atención']);
+const valueArchivos = ref(["certificacion_carga_horaria", "nota_atencion"]);
 
-const nomArchivos2 = ref(['1. Nota de atención']);
-const valueArchivos2 = ref(["nota_atencion"]);
+const nomArchivos2 = ref(['1. Convocatoria concurso de meritos']);
+const valueArchivos2 = ref(["convocatoria"]);
 
 async function enviarTramite() {
     confirm.require({

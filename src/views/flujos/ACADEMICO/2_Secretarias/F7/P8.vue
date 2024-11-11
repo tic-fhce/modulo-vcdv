@@ -1,31 +1,55 @@
 <template>
+    <Toast />
+    <ConfirmDialog />
     <AppTopbar></AppTopbar>
     <br>
     <div class="layout-main-container">
         <div style="width: 80%;">
             <div class="card">
-                <AppDatos :titulo="'CONVOCATORIA DE CONCURSO DE MERITOS PARA DOCENTES'"></AppDatos>
 
-                <ListaArchivos :swfirmar="'convocatoria'" :mostrarObservacionesProp="true"
-                    :valueArchivos="valueArchivos" :nomArchivos="nomArchivos" :tabla="'convocatoria'" />
-
-                <h6 :style="{ color: 'blue', textTransform: 'uppercase' }">
-                    FIRMAR LA CONVOCATORIA DESPUES DE LA REVISION
-                </h6>
-                <br><br>
-                <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
-                    <Button @click="redireccionar('/tramite-concluido')" severity="warning"><i
-                            class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
+                <AppDatos :active="true" :titulo="'CONVOCATORIA PARA DOCENTES INTERINOS'">
+                </AppDatos>
+                <div class="card">
+                    <h5 style="text-decoration: underline;">CONVOCATORIA</h5>
+                    <div class="field grid">
+                        <div class="col-12 mb-2 lg:col-12 lg:mb-0">
+                            <h5 style="color: blue;">{{ tipo }}</h5>
+                        </div>
+                    </div>
                 </div>
-                <div v-else class="flex justify-content-left flex-wrap gap-3">
-                    <Button @click="redireccionar('/tramite-pendiente')" severity="warning"><i
-                            class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
-                    <Button @click="enviarTramite()"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
+                <ListaArchivos ref="valRef" :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
+                    :mostrarObservacionesProp="true" :mostrarRevision="true" :mostrarVFirma="true" :nomDivision="'DOCUMENTOS'"
+                    :tabla="'conv_doc_interinos'" />
+                <br><br>
+
+                <ListaArchivos :valueArchivos="valueArchivos2" :nomArchivos="nomArchivos2"
+                    :mostrarVFirma="true" :nomDivision="'ATENCIÓN AL TRÁMITE'" :tabla="'conv_doc_interinos'" />
+                <br><br>
+
+                <div>
+                    <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
+                        <Button @click="redireccionar('/tramite-concluido')" severity="warning"><i
+                                class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
+                    </div>
+                    <div v-else class="flex justify-content-left flex-wrap gap-3">
+                        <Button @click="redireccionar('/tramite-pendiente')" severity="warning"><i
+                                class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
+                        <Button @click="enviarTramite()"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
+                    </div>
                 </div>
             </div>
             <!-- {{ datosrecividos }} -->
         </div>
     </div>
+    <!-- Modal de Carga -->
+    <Dialog v-model:visible="loadingModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
+        header="Cargando datos">
+        <div class="flex align-items-center justify-content-center">
+            <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
+                animationDuration=".5s" />
+            <span class="ml-3">Enviando, espere porfavor...</span>
+        </div>
+    </Dialog>
     <AppFooter></AppFooter>
 </template>
 
@@ -35,41 +59,123 @@ import { useRouter } from 'vue-router';
 import { createApp, ref, computed, onMounted } from 'vue';
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
-import AppDatos from './Components/Datos.vue';
+import AppDatos from './Components/Datos.vue'
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+import editDocumentService from '@/services/editDocument.service';
 import ListaArchivos from './Components/ListaArchivos.vue'
 import workflowService from '@/services/workflow.service';
+import documentService from '@/services/document.service';
+import convocatoriaService from '@/services/convDocInterinos.service';
 
 const router = useRouter()
 const store = useStore()
+const confirm = useConfirm();
+const toast = useToast();
+
+const loadingModal = ref(false);
 const datosrecividos = store.getters.getData
 const swdoc = !datosrecividos.fechafin
 
-const nomArchivos = ref(['1. Convocatoria concurso de meritos', '2. Certificacion de carga horaria']);
-const valueArchivos = ref(["convocatoria", "certificacion_carga_horaria"]);
+const comentario = ref('')
+const cond = ref('si')
+const valRef = ref(null)
+const tipo = ref()
 
-async function enviarTramite() {
-    const confirmed = confirm('¿Esta seguro de enviar estos datos?');
-    if (confirmed) {
-        const a = datosrecividos.nrotramite
-        const b = datosrecividos.flujo
-        const c = datosrecividos.proceso
+const nomArchivos = ref(['1. Convocatoria concurso de meritos', ]);
+const valueArchivos = ref(["convocatoria"]);
 
-        try {
-            const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' }
+const nomArchivos2 = ref(['1. Certificacion de carga horaria', '2. Nota de atención']);
+const valueArchivos2 = ref(["certificacion_carga_horaria", "nota_atencion"]);
 
-            await workflowService.siguienteproceso(env)
+onMounted(async () => {
+    const dat = { columna: 'convocatoria', observacion: null, nrotramite: datosrecividos.nrotramite, tabla: 'conv_doc_interinos' };
+    await documentService.actualizarobservacionDocumentos(dat);
+});
 
-        } catch (error) {
-            alert(error);
-        }
+onMounted(async () => {
+    verDatosConvocatoria();
+});
 
-        router.push("/tramite-concluido");
-    } else {
-        // El usuario canceló
+async function verDatosConvocatoria() {
+    const { data } = await convocatoriaService.obtenerConvocatoria({ 'nrotramite': datosrecividos.nrotramite })
+    if (data) {
+        tipo.value = data.tipo;
     }
-
 }
 
+async function enviarTramite() {
+    if (valRef.value.validarRadioButtons()) {
+        confirm.require({
+            message: 'Está seguro de enviar estos datos',
+            header: 'Confirmación',
+            icon: 'pi pi-question-circle',
+            accept: async () => {
+                try {
+                    const result = await valRef.value.todosDocumentosCorrectos();
+                    if (!result) {
+                        cond.value = 'no'
+                        comentario.value = 'observado'
+                    }
+                    const tb = valRef.value.tabla;
+                    const nt = datosrecividos.nrotramite;
+                    const enviarSolicitud = async (index) => {
+                        if (index < tb.length) {
+                            const e = tb[index];
+                            const corr = e.correcto.value;
+                            const err = e.errores.value;
+                            let obs;
+
+                            if (corr === 'correcto') {
+                                obs = corr;
+                            } else {
+                                obs = err;
+                            }
+                            const dat = { columna: valueArchivos.value[index], observacion: obs, nrotramite: nt, tabla: 'conv_doc_interinos' };
+                            await documentService.actualizarobservacionDocumentos(dat);
+
+                            await enviarSolicitud(index + 1);
+                        } else {
+                            const b = datosrecividos.flujo
+                            const c = datosrecividos.proceso
+                            try {
+                                const env = { 'flujo': b, 'proceso': c, 'tramiteId': nt, 'comentario': comentario.value, 'condicion': cond.value }
+                                const response = await workflowService.siguienteproceso(env);
+                                if (response) {
+                                    await generarHojaDeRuta();
+                                }
+                            } catch (error) {
+                                toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
+                            }
+                        }
+                    };
+                    await enviarSolicitud(0);
+                } catch (error) {
+                    toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
+                }
+            }
+        });
+    }
+}
+
+async function generarHojaDeRuta() {
+    const nt = datosrecividos.nrotramite;
+    const r = datosrecividos.rol;
+    const f = datosrecividos.formulario;
+    const obs = comentario.value;
+    const datosFormateados = { nrotramite: nt, rol: r, ref: f, obs: ' -  ' + obs };
+
+    loadingModal.value = true;
+    try {
+        await editDocumentService.editarDocumento(datosFormateados);
+        redireccionar("/tramite-pendiente");
+    } catch (error) {
+        alert('Error al generar la hoja de ruta', error);
+        redireccionar("/tramite-pendiente");
+    } finally {
+        loadingModal.value = false;
+    }
+}
 
 function redireccionar(url) {
     router.replace(url)

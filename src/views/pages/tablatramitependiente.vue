@@ -1,9 +1,12 @@
 <template>
     <div class="card">
         <h4 style="color: blue; text-align: center;">TRAMITES PENDIENTES</h4>
+        <!-- <Button label="Generar Reporte" icon="pi pi-file-pdf" class="p-button-warning"/> -->
         <DataTable v-model:filters="filters" :value="tramitependiente" paginator :rows="10" dataKey="id"
             filterDisplay="row" :loading="loading"
             :globalFilterFields="['nrotramite', 'flujo', 'proceso', 'observaciones', 'fechainicio', 'tiempo', 'estado', 'accion']">
+        
+            
             <template #header>
                 <div class="flex justify-content-end">
                     <InputText v-model="filters['global'].value" placeholder="Buscar..." />

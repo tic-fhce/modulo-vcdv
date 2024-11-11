@@ -105,8 +105,8 @@ const titulo = ref()
 const tutor = ref()
 
 const documentos = [
-    { nombre: '1. Proyecto de Resolucion de Designacion de Tribunal de Grado', archivo: 'F18 D1 PROYECTO RESOLUCION TRIBUNAL DE GRADO.docx', value: 'proyecto_resolucion_tribunal', url: '' },
-    { nombre: '2. Solicitud de aprobacion de Proyecto de Resolucion', archivo: 'F18 D2 SOLICITUD APROBACION TRIBUNAL DE GRADO.docx', value: 'solicitud_tribunal', url: '' }
+    { nombre: '1. Proyecto de Resolucion de Designacion de Tribunal de Grado', archivo: 'F20 D1 PROYECTO RESOLUCION TRIBUNAL DE GRADO.docx', value: 'proyecto_resolucion_tribunal', url: '' },
+    { nombre: '2. Solicitud de aprobacion de Proyecto de Resolucion', archivo: 'F20 D2 SOLICITUD APROBACION TRIBUNAL DE GRADO.docx', value: 'solicitud_tribunal', url: '' }
 ]
 
 const nomArchivos = ref(['1. Nota de suficiencia del tutor', '2. Trabajo de Grado']);

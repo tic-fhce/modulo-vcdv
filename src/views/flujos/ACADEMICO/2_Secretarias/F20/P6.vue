@@ -108,7 +108,7 @@ const titulo = ref()
 const tutor = ref()
 
 const documentos = [
-    { nombre: '1. Resolucion de Tribunal de Grado', archivo: 'F18 D3 RESOLUCION TRIBUNAL DE GRADO.docx', value: 'resolucion_tribunal', url: '' }
+    { nombre: '1. Resolucion de Tribunal de Grado', archivo: 'F20 D3 RESOLUCION TRIBUNAL DE GRADO.docx', value: 'resolucion_tribunal', url: '' }
 ];
 
 const nomArchivos = ref(['1. Nota de suficiencia del tutor', '2. Trabajo de Grado']);

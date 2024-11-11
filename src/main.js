@@ -220,3 +220,14 @@ app.component('VirtualScroller', VirtualScroller);
 //habilitamos componentes
 
 app.mount('#app')
+
+app.config.errorHandler = (err, vm, info) => {
+    console.error('Error Global:', err);
+    // Puedes mostrar un toast de error aquí
+    vm.$toast.add({
+        severity: 'error',
+        summary: 'Error Global',
+        detail: err.message,
+        life: 3000
+    });
+};

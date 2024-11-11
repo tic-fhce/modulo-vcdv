@@ -1,54 +1,19 @@
 <template>
     <AppTopbar></AppTopbar>
+    <Toast />
+    <ConfirmDialog />
     <br>
     <div class="layout-main-container">
         <div style="width: 80%;">
             <div class="card">
-                <AppDatos :titulo="'CONVOCATORIA DE CONCURSO DE MERITOS PARA DOCENTES'"></AppDatos>
+                <AppDatos :active="true" :titulo="'CONVOCATORIA PARA DOCENTES INTERINOS'"></AppDatos>
 
-                <ListaArchivos ref="valRef" :valueArchivos="valueArchivos" :nomArchivos="nomArchivos"
-                    :tabla="'convocatoria'" />
-                <br><br>
-                <h5>GENERAR LA CERTIFICACION DE CARGA HORARIA</h5>
-                <div v-if="loading" class="loading-icon">
-                    <i class="pi pi-spin pi-spinner"></i> Cargando...
-                </div> <br>
-                <div class="flex justify-content-left flex-wrap gap-3">
-                    <Button @click="uploadDocument" :disabled="uploadDone" severity="success">
-                        <i class="pi pi-book"> Crear Documento</i>
-                    </Button>
-                    <Button v-if="uploadDone" :disabled="!swdoc" @click="redirectDocument" severity="info">
-                        <i class="pi pi-link"> Editar Documento</i>
-                    </Button>
-                    <Button v-if="uploadDone" :disabled="!swdoc" @click="downloadDocument" severity="info">
-                        <i class="pi pi-download"> Descargar Documento</i>
-                    </Button>
-                </div>
-                <br><br>
-                <div v-if="uploadDone">
-                    <DataTable :value="documentos" :paginator="false">
-                        <Column header="DOCUMENTO">
-                            <template #body="{ data }">
-                                {{ data.archivo }}
-                            </template>
-                        </Column>
-                        <Column header="ENLACES">
-                            <template #body="{ data }">
-                                <a :href="data.url" @click.prevent="cargarDocumento(data.tipo)">
-                                    <i class="pi pi-link"> Ver Documento</i>
-                                </a>
-                            </template>
-                        </Column>
-                        <Column v-if="swdoc" header="FIRMAR">
-                            <template #body="{ data }">
-                                <Button @click="irAFirmar(data.tipo)" severity="info"><i class="pi pi-pencil">
-                                        Firmar</i></Button>
-                            </template>
-                        </Column>
-                    </DataTable>
+                <ListaArchivos :valueArchivos="valueArchivos" :nomArchivos="nomArchivos" :tabla="'conv_doc_interinos'"
+                    :nom-division="'CONVOCATORIA'" :mostrarObservacionesProp="true" />
+            </div>
 
-
-                </div>
+            <div class="card">
+                <GenerarDocument :documentos="documentos"></GenerarDocument>
                 <br><br>
                 <div v-if="!swdoc" class="flex justify-content-left flex-wrap gap-3">
                     <Button @click="redireccionar('/tramite-concluido')" severity="warning"><i
@@ -57,168 +22,111 @@
                 <div v-else class="flex justify-content-left flex-wrap gap-3">
                     <Button @click="redireccionar('/tramite-pendiente')" severity="warning"><i
                             class="pi pi-arrow-left">&nbsp;Regresar</i></Button>
-                    <Button @click="enviarTramite()" :disabled="!uploadDone"><i
-                            class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
+                    <Button @click="enviarTramite()"><i class="pi pi-arrow-right text">Enviar&nbsp;</i></Button>
                 </div>
             </div>
-            <!-- {{ datosrecividos }} -->
         </div>
     </div>
+    <!-- Modal de Carga -->
+    <Dialog v-model:visible="loadingModal" :modal="true" :closable="false" :draggable="false" :resizable="false"
+        header="Cargando datos">
+        <div class="flex align-items-center justify-content-center">
+            <ProgressSpinner style="width:50px; height:50px" strokeWidth="4" fill="var(--surface-ground)"
+                animationDuration=".5s" />
+            <span class="ml-3">Enviando, espere porfavor...</span>
+        </div>
+    </Dialog>
     <AppFooter></AppFooter>
 </template>
 
 <script setup>
 import { useStore } from 'vuex';
 import { useRouter } from 'vue-router';
-import { createApp, ref, computed, onMounted } from 'vue';
-import { globalStore } from '../../../../pages/globalStore'
+import { ref, onMounted } from 'vue';
 import AppFooter from '@/layout/AppFooter.vue';
 import AppTopbar from '@/layout/AppTopbar.vue';
 import AppDatos from './Components/Datos.vue';
 import ListaArchivos from './Components/ListaArchivos.vue'
 import workflowService from '@/services/workflow.service';
-import convocatoriaService from '@/services/convocatoria.service'
-import documentService from '@/services/document.service';
-import { handleUpload, handleUrl, handleDownload } from './Components/driveServiceConvocatoria.js'
+import { useConfirm } from "primevue/useconfirm";
+import { useToast } from "primevue/usetoast";
+import GenerarDocument from './Components/GenerarDocumentos.vue';
+import editDocumentService from '@/services/editDocument.service';
+import convDocInterinosService from '@/services/convDocInterinos.service';
 
+const confirm = useConfirm();
+const toast = useToast();
+
+const loadingModal = ref(false);
 const router = useRouter()
 const store = useStore()
 const datosrecividos = store.getters.getData
 const swdoc = !datosrecividos.fechafin
-const uploadDone = ref(false);
-const urlDoc = ref()
-const loading = ref(false)
-const docDrive = 'CERTIFICACION CARGA HORARIA.docx'
 
-const comentario = ref('')
-const cond = ref('si')
-const valRef = ref(null)
+const documentos = [
+    { nombre: '1. Certificacion de carga horaria', archivo: 'F7 D2 CERTIFICACION CARGA HORARIA.docx', value: 'certificacion_carga_horaria', url: '', activo: true }
+]
 
-const documentos = [{ archivo: '1. Certificacion de carga horaria', url: urlDoc, tipo: 'certificacion_carga_horaria' }]
-
-const nomArchivos = ref(['1. Convocatoria concurso de meritos']);
+const nomArchivos = ref([]);
 const valueArchivos = ref(["convocatoria"]);
 
 onMounted(async () => {
-    const dat = { 'nrotramite': datosrecividos.nrotramite, 'columna': 'c_certificacion_carga_horaria' };
-    try {
-        const res = await convocatoriaService.obtenerColumna(dat);
-        if (res.data != '') {
-            uploadDone.value = true
-            getDocumentUrl();
-        }
-    } catch (error) {
-        console.error(error);
-    }
+    verDatosConvocatoria();
 });
 
+async function verDatosConvocatoria() {
+    const { data } = await convDocInterinosService.obtenerConvocatoria({ 'nrotramite': datosrecividos.nrotramite })
+    if (data) {
+        nomArchivos.value.push(data.tipo)
+    }
+}
+
 async function enviarTramite() {
-    const confirmed = confirm('¿Esta seguro de enviar estos datos?');
-    if (confirmed) {
-        const a = datosrecividos.nrotramite
-        const b = datosrecividos.flujo
-        const c = datosrecividos.proceso
+    confirm.require({
+        message: 'Está seguro de enviar estos datos',
+        header: 'Confirmación',
+        icon: 'pi pi-question-circle',
+        accept: async () => {
+            try {
+                const a = datosrecividos.nrotramite
+                const b = datosrecividos.flujo
+                const c = datosrecividos.proceso
+                try {
+                    const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' }
 
-        try {
-            const env = { 'flujo': b, 'proceso': c, 'tramiteId': a, 'comentario': '', 'condicion': '' }
+                    const response = await workflowService.siguienteproceso(env);
+                    if (response) {
+                        await generarHojaDeRuta();
+                    }
+                } catch (error) {
+                    alert(error);
+                }
 
-            await workflowService.siguienteproceso(env)
-
-        } catch (error) {
-            alert(error);
+                redireccionar("/tramite-pendiente");
+            } catch (error) {
+                toast.add({ severity: 'error', summary: 'Error', detail: 'Error al enviar los datos', life: 3000 });
+            }
         }
-
-        router.push("/tramite-concluido");
-    } else {
-        // El usuario canceló
-    }
-
+    });
 }
 
-async function uploadDocument() {
-    loading.value = true
+async function generarHojaDeRuta() {
+    const nt = datosrecividos.nrotramite;
+    const r = datosrecividos.rol;
+    const f = datosrecividos.formulario;
+    const datosFormateados = { nrotramite: nt, rol: r, ref: f, obs: '' };
+
+    loadingModal.value = true;
     try {
-        const message = await handleUpload(docDrive, datosrecividos.nrotramite, 'c_certificacion_carga_horaria');
-        alert(message);
-        uploadDone.value = true;
-        if (uploadDone.value) {
-            getDocumentUrl();
-        }
-    } finally {
-        loading.value = false
-    }
-
-}
-
-async function getDocumentUrl() {
-    loading.value = true
-    try {
-        urlDoc.value = await handleUrl(datosrecividos.nrotramite, 'c_certificacion_carga_horaria');
-    } finally {
-        loading.value = false
-    }
-}
-
-
-async function downloadDocument() {
-    loading.value = true
-    try {
-        const message = await handleDownload(datosrecividos.nrotramite, 'c_certificacion_carga_horaria', 'certificacion_carga_horaria', datosrecividos.flujo, 'convocatoria');
-        alert(message);
-    } finally {
-        loading.value = false
-    }
-
-}
-
-function redirectDocument() {
-    loading.value = true
-    try {
-        if (!urlDoc.value) {
-            console.error("URL no está definida");
-            return;
-        }
-        window.open(urlDoc.value, '_blank');
-    } finally {
-        loading.value = false
-    }
-
-}
-
-async function cargarDocumento(nombreDocumento) {
-    try {
-        const nt = datosrecividos.nrotramite;
-        const dat = { nombre: nombreDocumento, nrotramite: nt, tabla: 'convocatoria', flujo: datosrecividos.flujo };
-        const response = await documentService.recuperarDocumentos(dat);
-        const archivoBlob = new Blob([response.data], { type: response.headers['content-type'] });
-        const archivoURL = URL.createObjectURL(archivoBlob);
-        window.open(archivoURL, '_blank');
-    } catch {
-        alert('Descargue el documento antes porfavor')
-    }
-
-}
-
-async function irAFirmar(nombreDocumento) {
-    try {
-        const nt = datosrecividos.nrotramite;
-        const dat = { nombre: nombreDocumento, nrotramite: nt, tabla: 'convocatoria', flujo: datosrecividos.flujo };
-        const response = await documentService.recuperarDocumentos(dat);
-        const archivoBlob = new Blob([response.data], { type: response.headers['content-type'] });
-
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const base64data = reader.result.split(',')[1];
-            globalStore.documento = base64data;
-            router.push({ name: 'firmar' });
-        };
-        reader.readAsDataURL(archivoBlob);
+        await editDocumentService.editarDocumento(datosFormateados);
+        redireccionar("/hoja-ruta");
     } catch (error) {
-        alert('Descargue el documento antes por favor');
+        alert('Error al generar la hoja de ruta', error);
+        redireccionar("/tramite-pendiente");
+    } finally {
+        loadingModal.value = false;
     }
 }
-
-
 
 function redireccionar(url) {
     router.replace(url)

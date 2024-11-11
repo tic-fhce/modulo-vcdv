@@ -142,7 +142,7 @@ import { useToast } from "primevue/usetoast";
 import { ref, computed, onMounted } from 'vue';
 import documentService from '@/services/document.service';
 import { listarTokens, listarCertificados, firmarDocumentosApi, validarDocumento } from '@/views/flujos/ACADEMICO/jacobitusService';
-import certificadoConclusionService from '@/services/certificadoConclusion.service';
+import convAuxDocenciaService from '@/services/convAuxDocencia.service';
 
 const confirm = useConfirm();
 const toast = useToast();
@@ -410,7 +410,7 @@ async function firmar() {
 
       // Actualizar la firma del documento en la base de datos
       const datAct = { 'colum': 'f_' + nombreDocumento, 'param': 'true', 'nrotramite': datosrecividos.nrotramite };
-      await certificadoConclusionService.actulizarColumna(datAct);
+      await convAuxDocenciaService.actulizarColumna(datAct);
 
       // Convertir el base64 a Blob
       const archivoBlob = base64ToBlob(base64Pdf, 'application/pdf');
